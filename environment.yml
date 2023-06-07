@@ -2,12 +2,18 @@ name: twoandahalfdimensions
 channels:
   - pytorch
   - nvidia
+  - conda-forge
 dependencies:
   - python
   - pytorch
   - torchvision
   - torchaudio
   - pytorch-cuda=11.7
+  - conda-forge::wandb
+  - conda-forge::seaborn
+  - conda-forge::pandas
+  - conda-forge::scikit-learn
   - pip
   - pip: 
     - medmnist
+    - hydra-core==1.2.0
