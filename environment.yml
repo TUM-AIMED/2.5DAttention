@@ -1,0 +1,13 @@
+name: twoandahalfdimensions
+channels:
+  - pytorch
+  - nvidia
+dependencies:
+  - python
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=11.7
+  - pip
+  - pip: 
+    - medmnist
