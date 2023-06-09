@@ -1,12 +1,25 @@
+import torchio as tio
+from typing import Any
 from medmnist import OrganMNIST3D
-
 from twoandahalfdimensions.utils.config import Config
 
 idty = lambda x: x
 
 
+def make_transforms(tf_dict: dict[str, Any]):
+    list_tfs = [getattr(tio, tf)(**kwargs) for tf, kwargs in tf_dict.items()]
+    return tio.Compose(list_tfs)
+
+
 def make_data(config: Config):
-    transforms = (idty, idty, idty)  # TODO
+    transforms = [
+        make_transforms(tf) if len(tf) > 0 else idty
+        for tf in (
+            config.transforms.train_tf,
+            config.transforms.val_tf,
+            config.transforms.test_tf,
+        )
+    ]
 
     if config.data.name == "organmnist3d":
         train_ds, val_ds, test_ds = (

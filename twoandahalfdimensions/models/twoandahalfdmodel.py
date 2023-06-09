@@ -54,6 +54,7 @@ class TwoAndAHalfDLSTM(TwoAndAHalfDModel):
         hidden_size: Optional[int] = None,
         num_layers: int = 2,
         bidirectional: bool = False,
+        **kwargs
     ) -> None:
         super().__init__(feature_extractor, classifier, feature_size)
         self.reduce_3d_module = nn.LSTM(
@@ -62,6 +63,7 @@ class TwoAndAHalfDLSTM(TwoAndAHalfDModel):
             num_layers=num_layers,
             batch_first=True,
             bidirectional=bidirectional,
+            **kwargs
         )
 
     def forward(self, x):

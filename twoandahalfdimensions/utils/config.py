@@ -46,6 +46,13 @@ class HyperparamConfig:
 
 
 @dataclass
+class TransformConfig:
+    train_tf: dict[str, Any] = field(default_factory=dict)
+    val_tf: dict[str, Any] = field(default_factory=dict)
+    test_tf: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class Config:
     general: GeneralConfig = field(default_factory=GeneralConfig)
     data: DataConfig = field(default_factory=DataConfig)
@@ -53,6 +60,7 @@ class Config:
     model: ModelConfig = field(default_factory=ModelConfig)
     hyperparams: HyperparamConfig = field(default_factory=HyperparamConfig)
     wandb: dict[str, Any] = field(default_factory=dict)
+    transforms: TransformConfig = field(default_factory=TransformConfig)
 
 
 def load_config_store():
