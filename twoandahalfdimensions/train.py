@@ -1,55 +1,42 @@
+import sys
 import hydra
 import torch
 import wandb
+import torchmetrics
+import seaborn as sn
 from pathlib import Path
-from tqdm import tqdm, trange
+from tqdm import trange
 from torch.utils.data import DataLoader
 from omegaconf import OmegaConf
 
-import torchmetrics
-
-import sys
 
 sys.path.insert(0, str(Path.cwd()))
 
 from twoandahalfdimensions.utils.data import make_data
-
+from twoandahalfdimensions.utils.training_utils import train, validate
 from twoandahalfdimensions.utils.config import Config, load_config_store
 from twoandahalfdimensions.models.preset_models import make_model_from_config
 
-sgmd = torch.nn.Softmax(dim=1)
+sn.set_theme(
+    context="notebook",
+    style="white",
+    font="Times New Roman",
+    font_scale=1.2,
+    palette="viridis",
+)
+sn.despine()
+sn.set(rc={"figure.figsize": (12, 12)}, font_scale=1.2)
+colors = {
+    "red": "firebrick",
+    "blue": "steelblue",
+    "green": "forestgreen",
+    "purple": "darkorchid",
+    "orange": "darkorange",
+    "gray": "lightslategray",
+    "black": "black",
+}
+
 load_config_store()
-
-
-def train(train_dl, model, opt, loss_fn, settings):
-    pbar = tqdm(train_dl, total=len(train_dl), desc="Training", leave=False)
-    for data, label in pbar:
-        opt.zero_grad()
-        data = data.to(**settings)
-        pred, att_map = model(data)
-        loss = loss_fn(pred, label.to(device=settings["device"]).squeeze())
-        loss.backward()
-        opt.step()
-        pbar.set_description_str(f"Loss: {loss.item():.3f}")
-
-
-def validate(val_dl, metric_fns, model, settings):
-    with torch.inference_mode():
-        preds, labels = [], []
-        for data, label in tqdm(
-            val_dl, total=len(val_dl), desc="Validating", leave=False
-        ):
-            data = data.to(**settings)
-            pred, att_map = model(data)
-            pred = sgmd(pred)
-            preds.append(pred.cpu())
-            labels.append(label)
-        preds, labels = torch.vstack(preds), torch.concatenate(labels).squeeze()
-        metrics = {
-            name: metric_fn(preds, labels).item()
-            for name, metric_fn in metric_fns.items()
-        }
-    return metrics
 
 
 @hydra.main(version_base=None, config_path=str(Path.cwd() / "configs"))
@@ -93,17 +80,35 @@ def main(config: Config):
             **config_dict["wandb"],
         )
 
-    train_metrics = validate(train_dl, metric_fns, model, settings)
-    val_metrics = validate(val_dl, metric_fns, model, settings)
+    train_metrics = validate(
+        train_dl, metric_fns, model, settings, add_wandb_plots=config.general.log_wandb
+    )
+    val_metrics = validate(
+        val_dl, metric_fns, model, settings, add_wandb_plots=config.general.log_wandb
+    )
     if config.general.log_wandb:
         wandb.log({"train": train_metrics, "val": val_metrics, "epoch": 0})
     for epoch in trange(config.hyperparams.epochs, desc="Epochs", leave=False):
         train(train_dl, model, opt, loss_fn, settings)
-        train_metrics = validate(train_dl, metric_fns, model, settings)
-        val_metrics = validate(val_dl, metric_fns, model, settings)
+        train_metrics = validate(
+            train_dl,
+            metric_fns,
+            model,
+            settings,
+            add_wandb_plots=config.general.log_wandb,
+        )
+        val_metrics = validate(
+            val_dl,
+            metric_fns,
+            model,
+            settings,
+            add_wandb_plots=config.general.log_wandb,
+        )
         if config.general.log_wandb:
             wandb.log({"train": train_metrics, "val": val_metrics, "epoch": epoch + 1})
-    test_metrics = validate(test_dl, metric_fns, model, settings)
+    test_metrics = validate(
+        test_dl, metric_fns, model, settings, add_wandb_plots=config.general.log_wandb
+    )
     if config.general.log_wandb:
         wandb.log({"test": test_metrics})
 
