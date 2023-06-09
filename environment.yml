@@ -13,7 +13,8 @@ dependencies:
   - conda-forge::seaborn
   - conda-forge::pandas
   - conda-forge::scikit-learn
+  - conda-forge::torchmetrics
   - pip
   - pip: 
     - medmnist
-    - hydra-core==1.2.0
+    - hydra-core

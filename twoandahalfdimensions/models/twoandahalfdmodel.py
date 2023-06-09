@@ -1,4 +1,4 @@
-import torch.nn as nn
+from torch import Tensor, nn
 
 
 class TwoAndAHalfDModel(nn.Module):
@@ -7,15 +7,21 @@ class TwoAndAHalfDModel(nn.Module):
     ):
         super().__init__()
         self.feature_extractor = feature_extractor
-        self.att = nn.MultiheadAttention(hidden_size, 8)
+        self.att = nn.MultiheadAttention(hidden_size, 8, batch_first=True)
         self.classifier = classifier
 
-    def forward(self, x):
-        features = self.feature_extractor(x).unsqueeze(
-            1
-        )  # assuming only 1 CT at a time
+    def forward(self, x: Tensor):
+        N_scans, C, N_slices, px_x, px_y = x.shape
+        x.transpose_(1, 2)
+        x = x.reshape(N_scans * N_slices, C, px_x, px_y)
+        features = self.feature_extractor(x)  # shape (N_scans*N_slices, num_classes)
+        features = features.reshape(
+            N_scans, N_slices, -1
+        )  # shape (N_scans, N_slices, num_classes)
 
-        query = features.mean(0, keepdims=True)
+        query = features.mean(1, keepdims=True)
         features, att_map = self.att(query, features, features)
-        out = self.classifier(features.squeeze(0))
+        features.squeeze_(1)
+        att_map.squeeze_(1)
+        out = self.classifier(features)
         return out, att_map
