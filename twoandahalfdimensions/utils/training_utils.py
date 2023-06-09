@@ -7,15 +7,20 @@ from matplotlib import pyplot as plt
 sgmd = torch.nn.Softmax(dim=1)
 
 
+def train_step(data, label, model, opt, loss_fn, settings):
+    opt.zero_grad()
+    data = data.to(**settings)
+    pred, att_map = model(data)
+    loss = loss_fn(pred, label.to(device=settings["device"]).squeeze())
+    loss.backward()
+    opt.step()
+    return loss
+
+
 def train(train_dl, model, opt, loss_fn, settings):
     pbar = tqdm(train_dl, total=len(train_dl), desc="Training", leave=False)
     for data, label in pbar:
-        opt.zero_grad()
-        data = data.to(**settings)
-        pred, att_map = model(data)
-        loss = loss_fn(pred, label.to(device=settings["device"]).squeeze())
-        loss.backward()
-        opt.step()
+        loss = train_step(data, label, model, opt, loss_fn, settings)
         pbar.set_description_str(f"Loss: {loss.item():.3f}")
 
 

@@ -81,6 +81,7 @@ def main(config: Config):
     model = make_model_from_config(config)
 
     model = model.to(**settings)
+    model = torch.compile(model)
     opt = torch.optim.NAdam(model.parameters(), lr=config.hyperparams.lr)
 
     N_params_total = get_num_params(model)
