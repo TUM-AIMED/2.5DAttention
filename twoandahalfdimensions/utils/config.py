@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path.cwd()))
 class GeneralConfig:
     force_cpu: bool = False
     log_wandb: bool = False
+    seed: int = 0
 
 
 @dataclass
@@ -32,6 +33,7 @@ class ModelConfig:
     in_channels: int = MISSING
     num_classes: int = MISSING
     freeze_feature_extractor: bool = MISSING
+    feature_dim: Optional[int] = None
     additional_args: dict[str, Any] = field(default_factory=dict)
 
 

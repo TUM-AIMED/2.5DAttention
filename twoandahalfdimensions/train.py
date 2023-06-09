@@ -8,6 +8,8 @@ from pathlib import Path
 from tqdm import trange
 from torch.utils.data import DataLoader
 from omegaconf import OmegaConf
+from numpy.random import seed as npseed
+from random import seed as rseed
 
 
 sys.path.insert(0, str(Path.cwd()))
@@ -45,6 +47,12 @@ get_num_params = lambda model: sum(
 
 @hydra.main(version_base=None, config_path=str(Path.cwd() / "configs"))
 def main(config: Config):
+    torch.manual_seed(config.general.seed)
+    npseed(config.general.seed)
+    rseed(config.general.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
     metric_fns = {
         "mcc": torchmetrics.MatthewsCorrCoef(task="multiclass", num_classes=11),
         "AUROC": torchmetrics.AUROC(task="multiclass", num_classes=11),

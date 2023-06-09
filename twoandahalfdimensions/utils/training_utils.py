@@ -78,3 +78,4 @@ def visualize_att_map(metrics, att_map, data):
     fig.subplots_adjust(wspace=0)
     metrics["att_map"] = fig
     metrics["frontal_view"] = wandb.Image(data_plot)
+    plt.close(fig)

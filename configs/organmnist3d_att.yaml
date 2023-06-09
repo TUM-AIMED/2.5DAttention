@@ -18,10 +18,11 @@ model:
   in_channels: 1
   num_classes: 11
   freeze_feature_extractor: True
+  feature_dim: 128
   additional_args:
-    num_heads: 16
+    num_heads: 8
 hyperparams: 
-  epochs: 100
+  epochs: 200
   train_bs: 256
   val_bs: 100
   test_bs: 100

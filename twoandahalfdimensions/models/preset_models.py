@@ -12,10 +12,21 @@ from twoandahalfdimensions.utils.config import Config, ModelTypes
 def make_model_from_config(config: Config):
     match config.model.backbone:
         case "resnet18":
-            feature_extractor, classifier, feature_size = make_resnet18(config)
+            (
+                feature_extractor,
+                classifier,
+                num_extracted_features,
+                num_classified_features,
+            ) = make_resnet18(config)
         case _:
             raise ValueError(f"Model {config.model.backbone} not supported yet")
-    model = make_model_adaptions(config, feature_extractor, classifier, feature_size)
+    model = make_model_adaptions(
+        config,
+        feature_extractor,
+        classifier,
+        num_extracted_features,
+        num_classified_features,
+    )
     return model
 
 
@@ -23,7 +34,8 @@ def make_model_adaptions(
     config: Config,
     feature_extractor: nn.Module,
     classifier: nn.Module,
-    feature_size: int,
+    feature_size_in: int,
+    feature_size_out: int,
 ):
     if config.model.in_channels != 3:
         scatter_conv = nn.Conv2d(config.model.in_channels, 3, 1, bias=False)
@@ -45,18 +57,29 @@ def make_model_adaptions(
     return model(
         feature_extractor,
         classifier,
-        feature_size,
+        feature_size_in,
+        feature_size_out,
         **config.model.additional_args,
     )
 
 
 def make_resnet18(config: Config):
     feature_extractor = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+    num_extracted_features = feature_extractor.fc.weight.shape[1]
     if config.model.num_classes == 1000:
         classifier = deepcopy(feature_extractor.fc)
     else:
         classifier = nn.Linear(
-            feature_extractor.fc.weight.shape[1], config.model.num_classes
+            num_extracted_features
+            if config.model.feature_dim is None
+            else config.model.feature_dim,
+            config.model.num_classes,
         )
     feature_extractor.fc = nn.Identity()
-    return feature_extractor, classifier, classifier.weight.shape[1]
+    num_classified_features = classifier.weight.shape[1]
+    return (
+        feature_extractor,
+        classifier,
+        num_extracted_features,
+        num_classified_features,
+    )

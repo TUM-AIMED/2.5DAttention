@@ -5,12 +5,17 @@ from typing import Optional
 
 class TwoAndAHalfDModel(nn.Module, ABC):
     def __init__(
-        self, feature_extractor: nn.Module, classifier: nn.Module, feature_size: int
+        self,
+        feature_extractor: nn.Module,
+        classifier: nn.Module,
+        feature_size_in: int,
+        feature_size_out: int,
     ) -> None:
         super().__init__()
         self.feature_extractor: nn.Module = feature_extractor
         self.classifier: nn.Module = classifier
-        self.feature_size: int = feature_size
+        self.feature_size_in: int = feature_size_in
+        self.feature_size_out: int = feature_size_out
         self.reduce_3d_module: nn.Module
 
 
@@ -19,14 +24,22 @@ class TwoAndAHalfDAttention(TwoAndAHalfDModel):
         self,
         feature_extractor: nn.Module,
         classifier: nn.Module,
-        feature_size: int,
+        feature_size_in: int,
+        feature_size_out: int,
         num_heads: int = 8,
         **kwargs
     ):
-        super().__init__(feature_extractor, classifier, feature_size)
-        self.reduce_3d_module = nn.MultiheadAttention(
-            self.feature_size, num_heads, batch_first=True, **kwargs
+        super().__init__(
+            feature_extractor, classifier, feature_size_in, feature_size_out
         )
+        self.reduce_3d_module = nn.MultiheadAttention(
+            self.feature_size_out, num_heads, batch_first=True, **kwargs
+        )
+        if feature_size_in != feature_size_out:
+            self.feature_extractor = nn.Sequential(
+                self.feature_extractor,
+                nn.Linear(self.feature_size_in, self.feature_size_out),
+            )
 
     def forward(self, x: Tensor):
         N_scans, C, N_slices, px_x, px_y = x.shape
@@ -50,16 +63,16 @@ class TwoAndAHalfDLSTM(TwoAndAHalfDModel):
         self,
         feature_extractor: nn.Module,
         classifier: nn.Module,
-        feature_size: int,
+        feature_size_in: int,
         hidden_size: Optional[int] = None,
         num_layers: int = 2,
         bidirectional: bool = False,
         **kwargs
     ) -> None:
-        super().__init__(feature_extractor, classifier, feature_size)
+        super().__init__(feature_extractor, classifier, feature_size_in, hidden_size)
         self.reduce_3d_module = nn.LSTM(
-            input_size=self.feature_size,
-            hidden_size=hidden_size if hidden_size is not None else self.feature_size,
+            input_size=self.feature_size_in,
+            hidden_size=self.feature_size_out,
             num_layers=num_layers,
             batch_first=True,
             bidirectional=bidirectional,
