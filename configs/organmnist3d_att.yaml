@@ -1,0 +1,29 @@
+defaults:
+  - base_config
+  - _self_
+general:
+  force_cpu: False
+  log_wandb: False
+data:
+  name: organmnist3d
+wandb: 
+  project: twoandahalfdimensions
+loader:
+  num_workers: 0
+  # prefetch_factor: 1
+  pin_memory: True
+model: 
+  type: twop5_att
+  backbone: resnet18
+  in_channels: 1
+  num_classes: 11
+  freeze_feature_extractor: True
+  additional_args:
+    num_heads: 16
+hyperparams: 
+  epochs: 100
+  train_bs: 8
+  val_bs: 8
+  test_bs: 8
+  lr: 2e-3
+  # overfit: 5

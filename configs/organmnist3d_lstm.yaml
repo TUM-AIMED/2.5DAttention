@@ -13,7 +13,7 @@ loader:
   # prefetch_factor: 1
   pin_memory: True
 model: 
-  type: twop5
+  type: twop5_lstm
   backbone: resnet18
   in_channels: 1
   num_classes: 11

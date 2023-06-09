@@ -38,6 +38,10 @@ colors = {
 
 load_config_store()
 
+get_num_params = lambda model: sum(
+    p.numel() for p in model.parameters() if p.requires_grad
+)
+
 
 @hydra.main(version_base=None, config_path=str(Path.cwd() / "configs"))
 def main(config: Config):
@@ -71,6 +75,10 @@ def main(config: Config):
     model = model.to(**settings)
     opt = torch.optim.NAdam(model.parameters(), lr=config.hyperparams.lr)
 
+    N_params_total = get_num_params(model)
+    N_params_feature_extractor = get_num_params(model.feature_extractor)
+    N_params_classifier = get_num_params(model.classifier)
+    N_params_reduce = get_num_params(model.reduce_3d_module)
     if config.general.log_wandb:
         config_dict = OmegaConf.to_container(config)
         wandb.init(
@@ -79,6 +87,22 @@ def main(config: Config):
             reinit=True,
             **config_dict["wandb"],
         )
+        wandb.log(
+            {
+                "num_params": {
+                    "total": N_params_total,
+                    "feature_extractor": N_params_feature_extractor,
+                    "classifier": N_params_classifier,
+                    "2.5DModule": N_params_reduce,
+                }
+            }
+        )
+    else:
+        print("Model parameters:")
+        print(f"\tTotal: {N_params_total:,}")
+        print(f"\tFeature Extractor: {N_params_feature_extractor:,}")
+        print(f"\tClassifier: {N_params_classifier:,}")
+        print(f"\t2.5D Module: {N_params_reduce:,}")
 
     train_metrics = validate(
         train_dl, metric_fns, model, settings, add_wandb_plots=config.general.log_wandb

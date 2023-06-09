@@ -21,7 +21,8 @@ class DataConfig:
 
 
 class ModelTypes(Enum):
-    twop5 = 0
+    twop5_att = 0
+    twop5_lstm = 1
 
 
 @dataclass
@@ -31,6 +32,7 @@ class ModelConfig:
     in_channels: int = MISSING
     num_classes: int = MISSING
     freeze_feature_extractor: bool = MISSING
+    additional_args: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
