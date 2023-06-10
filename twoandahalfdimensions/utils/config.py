@@ -14,6 +14,8 @@ class GeneralConfig:
     force_cpu: bool = False
     log_wandb: bool = False
     seed: int = 0
+    compile: bool = False
+    log_images: bool = True
 
 
 @dataclass
@@ -26,14 +28,28 @@ class ModelTypes(Enum):
     twop5_lstm = 1
 
 
+class DataViewAxis(Enum):
+    all_sides = 0
+    only_x = 1
+    only_y = 2
+    only_z = 3
+
+
+@dataclass
+class UnfreezeConfig:
+    train_mode: int = -1
+    feature_extractor: int = -1
+
+
 @dataclass
 class ModelConfig:
     type: ModelTypes = MISSING
+    data_view_axis: DataViewAxis = DataViewAxis.all_sides
     backbone: str = MISSING
     in_channels: int = MISSING
     num_classes: int = MISSING
-    freeze_feature_extractor: bool = MISSING
     feature_dim: Optional[int] = None
+    unfreeze: UnfreezeConfig = field(default_factory=UnfreezeConfig)
     additional_args: dict[str, Any] = field(default_factory=dict)
 
 
@@ -43,8 +59,8 @@ class HyperparamConfig:
     train_bs: int = MISSING
     val_bs: int = MISSING
     test_bs: int = MISSING
-    lr: float = MISSING
     overfit: Optional[int] = None
+    opt_args: dict[str, Any] = MISSING
 
 
 @dataclass

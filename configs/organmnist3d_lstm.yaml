@@ -15,14 +15,18 @@ loader:
 model: 
   type: twop5_lstm
   backbone: resnet18
+  data_view_axis: all_sides
   in_channels: 1
   num_classes: 11
-  freeze_feature_extractor: True
   feature_dim: 128
+  unfreeze: 
+    train_mode: -1
+    feature_extractor: 2
 hyperparams: 
-  epochs: 100
-  train_bs: 8
-  val_bs: 8
-  test_bs: 8
-  lr: 2e-3
+  epochs: 50
+  train_bs: 64
+  val_bs: 64
+  test_bs: 64
+  opt_args:
+    lr: 2e-4
   # overfit: 5

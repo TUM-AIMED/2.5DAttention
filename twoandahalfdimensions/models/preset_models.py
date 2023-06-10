@@ -43,9 +43,8 @@ def make_model_adaptions(
             p.requires_grad_(False)
         scatter_conv.weight.set_(ones_like(scatter_conv.weight))
     feature_extractor = nn.Sequential(scatter_conv, feature_extractor)
-    if config.model.freeze_feature_extractor:
-        for param in feature_extractor.parameters():
-            param.requires_grad_(False)
+    for param in feature_extractor.parameters():
+        param.requires_grad_(False)
 
     match config.model.type:
         case ModelTypes.twop5_att:
@@ -59,6 +58,7 @@ def make_model_adaptions(
         classifier,
         feature_size_in,
         feature_size_out,
+        data_view_axis=config.model.data_view_axis,
         **config.model.additional_args,
     )
 

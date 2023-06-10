@@ -163,3 +163,4 @@ outputs/
 .vscode/
 wandb/
 sweeps/
+playground/

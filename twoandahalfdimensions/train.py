@@ -79,10 +79,12 @@ def main(config: Config):
     )
     loss_fn = torch.nn.CrossEntropyLoss()
     model = make_model_from_config(config)
+    model.eval()
 
     model = model.to(**settings)
-    model = torch.compile(model)
-    opt = torch.optim.NAdam(model.parameters(), lr=config.hyperparams.lr)
+    if config.general.compile:
+        model = torch.compile(model)
+    opt = torch.optim.NAdam(model.parameters(), **config.hyperparams.opt_args)
 
     N_params_total = get_num_params(model)
     N_params_feature_extractor = get_num_params(model.feature_extractor)
@@ -112,35 +114,45 @@ def main(config: Config):
         print(f"\tFeature Extractor: {N_params_feature_extractor:,}")
         print(f"\tClassifier: {N_params_classifier:,}")
         print(f"\t2.5D Module: {N_params_reduce:,}")
+    data_view_axes = (
+        config.model.data_view_axis
+        if config.general.log_wandb and config.general.log_images
+        else None
+    )
 
     train_metrics = validate(
-        train_dl, metric_fns, model, settings, add_wandb_plots=config.general.log_wandb
+        train_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
     )
     val_metrics = validate(
-        val_dl, metric_fns, model, settings, add_wandb_plots=config.general.log_wandb
+        val_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
     )
     if config.general.log_wandb:
         wandb.log({"train": train_metrics, "val": val_metrics, "epoch": 0})
     for epoch in trange(config.hyperparams.epochs, desc="Epochs", leave=False):
+        epoch_logging_dict = {}
+        if epoch > config.model.unfreeze.train_mode:
+            model.train()
         train(train_dl, model, opt, loss_fn, settings)
-        train_metrics = validate(
-            train_dl,
-            metric_fns,
-            model,
-            settings,
-            add_wandb_plots=config.general.log_wandb,
-        )
-        val_metrics = validate(
-            val_dl,
-            metric_fns,
-            model,
-            settings,
-            add_wandb_plots=config.general.log_wandb,
-        )
+        model.eval()
+        if epoch == config.model.unfreeze.feature_extractor:
+            for param in model.feature_extractor.parameters():
+                param.requires_grad_(True)
+            if config.general.log_wandb:
+                epoch_logging_dict["num_params"] = {
+                    "feature_extractor": get_num_params(model.feature_extractor),
+                    "total": get_num_params(model),
+                }
         if config.general.log_wandb:
-            wandb.log({"train": train_metrics, "val": val_metrics, "epoch": epoch + 1})
+            epoch_logging_dict["train"] = validate(
+                train_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
+            )
+            epoch_logging_dict["val"] = validate(
+                val_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
+            )
+            epoch_logging_dict["epoch"] = epoch + 1
+            wandb.log(epoch_logging_dict)
     test_metrics = validate(
-        test_dl, metric_fns, model, settings, add_wandb_plots=config.general.log_wandb
+        test_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
     )
     if config.general.log_wandb:
         wandb.log({"test": test_metrics})
