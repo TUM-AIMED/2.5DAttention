@@ -10,16 +10,22 @@ from twoandahalfdimensions.utils.config import Config, ModelTypes
 
 
 def make_model_from_config(config: Config):
-    match config.model.backbone:
-        case "resnet18":
-            (
-                feature_extractor,
-                classifier,
-                num_extracted_features,
-                num_classified_features,
-            ) = make_resnet18(config)
-        case _:
-            raise ValueError(f"Model {config.model.backbone} not supported yet")
+    if "resnet" in config.model.backbone:
+        (
+            feature_extractor,
+            classifier,
+            num_extracted_features,
+            num_classified_features,
+        ) = make_resnet(config)
+    elif "vit" in config.model.backbone:
+        (
+            feature_extractor,
+            classifier,
+            num_extracted_features,
+            num_classified_features,
+        ) = make_vit(config)
+    else:
+        raise ValueError(f"Model {config.model.backbone} not supported yet")
     model = make_model_adaptions(
         config,
         feature_extractor,
@@ -63,19 +69,61 @@ def make_model_adaptions(
     )
 
 
-def make_resnet18(config: Config):
-    feature_extractor = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+def make_resnet(config: Config):
+    match config.model.backbone:
+        case "resnet18":
+            feature_extractor = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        case "resnet34":
+            feature_extractor = models.resnet34(weights=models.ResNet34_Weights.DEFAULT)
+        case "resnet50":
+            feature_extractor = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
+        case "resnet101":
+            feature_extractor = models.resnet101(
+                weights=models.ResNet101_Weights.DEFAULT
+            )
+        case "resnet152":
+            feature_extractor = models.resnet152(
+                weights=models.ResNet152_Weights.DEFAULT
+            )
+        case _:
+            raise ValueError(f"ResNet {config.model.backbone} not supported")
     num_extracted_features = feature_extractor.fc.weight.shape[1]
-    if config.model.num_classes == 1000:
-        classifier = deepcopy(feature_extractor.fc)
-    else:
-        classifier = nn.Linear(
-            num_extracted_features
-            if config.model.feature_dim is None
-            else config.model.feature_dim,
-            config.model.num_classes,
-        )
+    classifier = nn.Linear(
+        num_extracted_features
+        if config.model.feature_dim is None
+        else config.model.feature_dim,
+        config.model.num_classes,
+    )
     feature_extractor.fc = nn.Identity()
+    num_classified_features = classifier.weight.shape[1]
+    return (
+        feature_extractor,
+        classifier,
+        num_extracted_features,
+        num_classified_features,
+    )
+
+
+def make_vit(config: Config):
+    match config.model.backbone:
+        case "vit_b_16":
+            feature_extractor = models.vit_b_16(models.ViT_B_16_Weights.DEFAULT)
+        case "vit_b_32":
+            feature_extractor = models.vit_b_32(models.ViT_B_32_Weights.DEFAULT)
+        case "vit_l_16":
+            feature_extractor = models.vit_l_16(models.ViT_L_16_Weights.DEFAULT)
+        case "vit_l_32":
+            feature_extractor = models.vit_l_32(models.ViT_L_32_Weights.DEFAULT)
+        case "vit_h_14":
+            feature_extractor = models.vit_h_14(models.ViT_H_14_Weights.DEFAULT)
+    num_extracted_features = feature_extractor.heads[0].weight.shape[1]
+    classifier = nn.Linear(
+        num_extracted_features
+        if config.model.feature_dim is None
+        else config.model.feature_dim,
+        config.model.num_classes,
+    )
+    feature_extractor.heads = nn.Identity()
     num_classified_features = classifier.weight.shape[1]
     return (
         feature_extractor,

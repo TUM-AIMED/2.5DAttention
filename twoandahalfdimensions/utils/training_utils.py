@@ -119,6 +119,7 @@ def visualize_att_map(metrics, att_map, data, data_vis_axes: DataViewAxis):
         att_slice = data_numpy[tuple(data_index)].squeeze()
         ax[0].imshow(data_plot.T, **plt_kwargs)
         ax[1].barh(np.arange(att_map_plot.shape[0]), att_map_plot, align="edge")
+        ax[1].set_xlim(0, att_map_numpy.max())
         ax[1].set_ylim(0, att_map_plot.shape[0])
         ax[1].invert_yaxis()
         ax[2].imshow(att_slice.T, **plt_kwargs)
@@ -132,7 +133,7 @@ def visualize_att_map(metrics, att_map, data, data_vis_axes: DataViewAxis):
         ax[0].set_xlabel(
             f"{axes_names[axis_order[0]]} (Middle of {axes_names[axis_order[2]]})"
         )
-        ax[1].set_xlabel(f"Attention along {axes_names[axis_order[0]]}")
+        ax[1].set_xlabel(f"Attention along {axes_names[axis_order[1]]}")
         ax[2].set_xlabel(f"Highest attenuated slice along {axes_names[axis_order[1]]}")
         ax[0].grid(False)
         ax[1].grid(True)
