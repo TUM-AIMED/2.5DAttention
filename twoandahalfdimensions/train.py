@@ -8,9 +8,9 @@ from pathlib import Path
 from tqdm import trange
 from torch.utils.data import DataLoader
 from omegaconf import OmegaConf
+from numpy import mean
 from numpy.random import seed as npseed
 from random import seed as rseed
-
 
 sys.path.insert(0, str(Path.cwd()))
 
@@ -53,11 +53,13 @@ def main(config: Config):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+    task = "multiclass" if config.model.num_classes > 1 else "binary"
+    num_classes = config.model.num_classes if config.model.num_classes > 1 else None
     metric_fns = {
-        "mcc": torchmetrics.MatthewsCorrCoef(task="multiclass", num_classes=11),
-        "AUROC": torchmetrics.AUROC(task="multiclass", num_classes=11),
-        "F1-Score": torchmetrics.F1Score(task="multiclass", num_classes=11),
-        "accuracy": torchmetrics.Accuracy(task="multiclass", num_classes=11),
+        "mcc": torchmetrics.MatthewsCorrCoef(task=task, num_classes=num_classes),
+        "AUROC": torchmetrics.AUROC(task=task, num_classes=num_classes),
+        "F1-Score": torchmetrics.F1Score(task=task, num_classes=num_classes),
+        "accuracy": torchmetrics.Accuracy(task=task, num_classes=num_classes),
     }
 
     device = (
@@ -77,7 +79,14 @@ def main(config: Config):
         DataLoader(val_ds, batch_size=config.hyperparams.val_bs, **config.loader),
         DataLoader(test_ds, batch_size=config.hyperparams.test_bs, **config.loader),
     )
-    loss_fn = torch.nn.CrossEntropyLoss()
+    loss_fn = (
+        torch.nn.CrossEntropyLoss()
+        if config.model.num_classes > 1
+        else torch.nn.BCEWithLogitsLoss()
+    )
+    activation_fn = (
+        torch.nn.Softmax(dim=1) if config.model.num_classes > 1 else torch.nn.Sigmoid()
+    )
     model = make_model_from_config(config)
     model.eval()
 
@@ -121,10 +130,20 @@ def main(config: Config):
     )
 
     train_metrics = validate(
-        train_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
+        train_dl,
+        metric_fns,
+        model,
+        settings,
+        activation_fn=activation_fn,
+        data_vis_axes=data_view_axes,
     )
     val_metrics = validate(
-        val_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
+        val_dl,
+        metric_fns,
+        model,
+        settings,
+        activation_fn=activation_fn,
+        data_vis_axes=data_view_axes,
     )
     if config.general.log_wandb:
         wandb.log({"train": train_metrics, "val": val_metrics, "epoch": 0})
@@ -132,7 +151,7 @@ def main(config: Config):
         epoch_logging_dict = {}
         if epoch > config.model.unfreeze.train_mode:
             model.train()
-        train(train_dl, model, opt, loss_fn, settings)
+        losses = train(train_dl, model, opt, loss_fn, settings)
         model.eval()
         if epoch == config.model.unfreeze.feature_extractor:
             for param in model.feature_extractor.parameters():
@@ -144,15 +163,31 @@ def main(config: Config):
                 }
         if config.general.log_wandb:
             epoch_logging_dict["train"] = validate(
-                train_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
+                train_dl,
+                metric_fns,
+                model,
+                settings,
+                activation_fn=activation_fn,
+                data_vis_axes=data_view_axes,
             )
+            epoch_logging_dict["train"]["loss"] = mean(losses)
             epoch_logging_dict["val"] = validate(
-                val_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
+                val_dl,
+                metric_fns,
+                model,
+                settings,
+                activation_fn=activation_fn,
+                data_vis_axes=data_view_axes,
             )
             epoch_logging_dict["epoch"] = epoch + 1
             wandb.log(epoch_logging_dict)
     test_metrics = validate(
-        test_dl, metric_fns, model, settings, data_vis_axes=data_view_axes
+        test_dl,
+        metric_fns,
+        model,
+        settings,
+        activation_fn=activation_fn,
+        data_vis_axes=data_view_axes,
     )
     if config.general.log_wandb:
         wandb.log({"test": test_metrics})

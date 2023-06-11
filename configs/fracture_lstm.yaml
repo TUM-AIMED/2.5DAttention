@@ -1,0 +1,9 @@
+defaults:
+  - lstm_base@_here_
+  - _self_
+data:
+  name: fracturemnist3d
+wandb: 
+  name: fracturemnist3d_lstm
+model: 
+  num_classes: 3

@@ -1,0 +1,9 @@
+defaults:
+  - att_base@_here_
+  - _self_
+wandb:
+  name: organmnist3d_att
+data:
+  name: organmnist3d
+model: 
+  num_classes: 11

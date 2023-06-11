@@ -1,0 +1,9 @@
+defaults:
+  - att_base@_here_
+  - _self_
+wandb:
+  name: fracturemnist3d_att
+data:
+  name: fracturemnist3d
+model: 
+  num_classes: 3

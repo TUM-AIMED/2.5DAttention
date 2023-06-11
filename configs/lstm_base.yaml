@@ -5,7 +5,7 @@ general:
   force_cpu: False
   log_wandb: False
 data:
-  name: organmnist3d
+  name: empty
 wandb: 
   project: twoandahalfdimensions
 loader:
@@ -17,7 +17,7 @@ model:
   backbone: resnet18
   data_view_axis: all_sides
   in_channels: 1
-  num_classes: 11
+  num_classes: -1
   feature_dim: 128
   unfreeze: 
     train_mode: -1

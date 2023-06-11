@@ -1,0 +1,9 @@
+defaults:
+  - lstm_base@_here_
+  - _self_
+data:
+  name: synapsemnist3d
+wandb: 
+  name: synapsemnist3d_lstm
+model: 
+  num_classes: 1

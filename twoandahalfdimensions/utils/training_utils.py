@@ -7,14 +7,12 @@ from typing import Optional
 
 from twoandahalfdimensions.utils.config import DataViewAxis
 
-sgmd = torch.nn.Softmax(dim=1)
-
 
 def train_step(data, label, model, opt, loss_fn, settings):
     opt.zero_grad()
     data = data.to(**settings)
     pred, att_map = model(data)
-    loss = loss_fn(pred, label.to(device=settings["device"]).squeeze())
+    loss = loss_fn(pred.squeeze(), label.to(device=settings["device"]).squeeze())
     loss.backward()
     opt.step()
     return loss.detach().item()
@@ -31,7 +29,12 @@ def train(train_dl, model, opt, loss_fn, settings):
 
 
 def validate(
-    val_dl, metric_fns, model, settings, data_vis_axes: Optional[DataViewAxis] = None
+    val_dl,
+    metric_fns,
+    model,
+    settings,
+    activation_fn: torch.nn.Module,
+    data_vis_axes: Optional[DataViewAxis] = None,
 ):
     with torch.inference_mode():
         preds, labels = [], []
@@ -40,10 +43,13 @@ def validate(
         ):
             data = data.to(**settings)
             pred, att_map = model(data)
-            pred = sgmd(pred)
+            pred = activation_fn(pred)
             preds.append(pred.cpu())
             labels.append(label)
-        preds, labels = torch.vstack(preds), torch.concatenate(labels).squeeze()
+        preds, labels = (
+            torch.vstack(preds).squeeze(),
+            torch.concatenate(labels).squeeze(),
+        )
         metrics = {
             name: metric_fn(preds, labels).item()
             for name, metric_fn in metric_fns.items()

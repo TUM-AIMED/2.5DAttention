@@ -7,7 +7,7 @@ general:
   compile: False
   log_images: True
 data:
-  name: organmnist3d
+  name: empty
 wandb: 
   project: twoandahalfdimensions
 loader:
@@ -19,7 +19,7 @@ model:
   backbone: resnet18
   data_view_axis: all_sides
   in_channels: 1
-  num_classes: 11
+  num_classes: -1
   feature_dim: 512
   unfreeze: 
     train_mode: 0
