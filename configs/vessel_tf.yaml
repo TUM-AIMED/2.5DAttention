@@ -1,0 +1,9 @@
+defaults:
+  - tf_base@_here_
+  - _self_
+wandb:
+  name: vesselmnist3d_tf
+data:
+  name: vesselmnist3d
+model: 
+  num_classes: 1

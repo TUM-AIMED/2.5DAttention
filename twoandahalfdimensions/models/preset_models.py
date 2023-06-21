@@ -5,6 +5,7 @@ from copy import deepcopy
 from twoandahalfdimensions.models.twoandahalfdmodel import (
     TwoAndAHalfDAttention,
     TwoAndAHalfDLSTM,
+    TwoAndAHalfDTransformer,
 )
 from twoandahalfdimensions.utils.config import Config, ModelTypes
 
@@ -53,10 +54,12 @@ def make_model_adaptions(
         param.requires_grad_(False)
 
     match config.model.type:
-        case ModelTypes.twop5_att:
-            model = TwoAndAHalfDAttention
         case ModelTypes.twop5_lstm:
             model = TwoAndAHalfDLSTM
+        case ModelTypes.twop5_att:
+            model = TwoAndAHalfDAttention
+        case ModelTypes.twop5_tf:
+            model = TwoAndAHalfDTransformer
         case _:
             raise ValueError(f"Type {config.model.type} not supported yet")
     return model(

@@ -1,0 +1,41 @@
+defaults:
+  - base_config
+  - _self_
+general:
+  force_cpu: False
+  log_wandb: False
+  compile: False
+  log_images: True
+data:
+  name: empty
+wandb: 
+  project: twoandahalfdimensions
+loader:
+  num_workers: 0
+  # prefetch_factor: 1
+  pin_memory: True
+model: 
+  type: twop5_tf
+  backbone: resnet18
+  data_view_axis: all_sides
+  in_channels: 1
+  num_classes: -1
+  feature_dim: 512
+  unfreeze: 
+    train_mode: 0
+    feature_extractor: 2
+  # additional_args:
+    # num_heads: 8
+hyperparams: 
+  epochs: 50
+  train_bs: 64
+  val_bs: 64
+  test_bs: 64
+  opt_args:
+    lr: 2e-4
+    # weight_decay: 1e-3
+  # overfit: 5
+# transforms:
+  # train_tf:
+    # RandomFlip:
+      # flip_probability: 0

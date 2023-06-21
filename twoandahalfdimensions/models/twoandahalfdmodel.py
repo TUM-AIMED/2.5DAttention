@@ -1,6 +1,5 @@
 from abc import ABC
-from torch import Tensor, nn, ones, stack
-from typing import Optional
+from torch import Tensor, nn, stack
 
 
 from twoandahalfdimensions.utils.config import DataViewAxis
@@ -62,7 +61,7 @@ class TwoAndAHalfDAttention(TwoAndAHalfDModel):
         feature_size_out: int,
         data_view_axis: DataViewAxis,
         num_heads: int = 8,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             feature_extractor,
@@ -100,7 +99,7 @@ class TwoAndAHalfDLSTM(TwoAndAHalfDModel):
         data_view_axis: DataViewAxis,
         num_layers: int = 2,
         bidirectional: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(
             feature_extractor,
@@ -115,7 +114,7 @@ class TwoAndAHalfDLSTM(TwoAndAHalfDModel):
             num_layers=num_layers,
             batch_first=True,
             bidirectional=bidirectional,
-            **kwargs
+            **kwargs,
         )
 
     def forward(self, x):
@@ -125,4 +124,39 @@ class TwoAndAHalfDLSTM(TwoAndAHalfDModel):
         summed_features, (h_n, c_n) = self.reduce_3d_module(features)
         summed_features = summed_features[:, -1]
         out = self.classifier(summed_features)
+        return out, None
+
+
+class TwoAndAHalfDTransformer(TwoAndAHalfDModel):
+    def __init__(
+        self,
+        feature_extractor: nn.Module,
+        classifier: nn.Module,
+        feature_size_in: int,
+        feature_size_out: int,
+        data_view_axis: DataViewAxis,
+        **transformer_kwargs,
+    ) -> None:
+        super().__init__(
+            feature_extractor,
+            classifier,
+            feature_size_in,
+            feature_size_out,
+            data_view_axis,
+        )
+        self.reduce_3d_module = nn.Transformer(
+            self.feature_size_out, batch_first=True, **transformer_kwargs
+        )
+        if feature_size_in != feature_size_out:
+            self.feature_extractor = nn.Sequential(
+                self.feature_extractor,
+                nn.Linear(self.feature_size_in, self.feature_size_out),
+            )
+
+    def forward(self, x: Tensor):
+        features = super().forward(x)
+        query = features.mean(1, keepdims=True)
+        features = self.reduce_3d_module(features, query)
+        features.squeeze_(1)
+        out = self.classifier(features)
         return out, None

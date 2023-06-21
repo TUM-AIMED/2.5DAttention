@@ -1,0 +1,9 @@
+defaults:
+  - tf_base@_here_
+  - _self_
+wandb:
+  name: synapsemnist3d_tf
+data:
+  name: synapsemnist3d
+model: 
+  num_classes: 1
