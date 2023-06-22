@@ -5,7 +5,7 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 from typing import Optional
 
-from twoandahalfdimensions.utils.config import DataViewAxis
+from twoandahalfdimensions.utils.config import DataViewAxis, Config
 
 
 def train_step(data, label, model, opt, loss_fn, settings):
@@ -29,11 +29,13 @@ def train(train_dl, model, opt, loss_fn, settings):
 
 
 def validate(
+    config: Config,
     val_dl,
     metric_fns,
     model,
     settings,
     activation_fn: torch.nn.Module,
+    logging_step: int,
     data_vis_axes: Optional[DataViewAxis] = None,
 ):
     with torch.inference_mode():
@@ -50,16 +52,29 @@ def validate(
             torch.vstack(preds).squeeze(),
             torch.concatenate(labels).squeeze(),
         )
+        if preds is not torch.Tensor:
+            preds = torch.Tensor(preds)
+        if labels is not torch.Tensor:
+            labels = torch.Tensor(labels)
         metrics = {
             name: metric_fn(preds, labels).item()
             for name, metric_fn in metric_fns.items()
         }
         if data_vis_axes and att_map is not None:
-            visualize_att_map(metrics, att_map, data, data_vis_axes)
+            visualize_att_map(
+                config, metrics, att_map, data, data_vis_axes, logging_step
+            )
     return metrics
 
 
-def visualize_att_map(metrics, att_map, data, data_vis_axes: DataViewAxis):
+def visualize_att_map(
+    config: Config,
+    metrics,
+    att_map,
+    data,
+    data_vis_axes: DataViewAxis,
+    logging_step: int,
+):
     BATCH_INDEX = -1
     att_map_numpy = att_map.cpu().numpy()[BATCH_INDEX]  # [::-1]
     data_numpy = data.cpu().numpy()[BATCH_INDEX]  # (C, Z, X, Y)
@@ -139,6 +154,16 @@ def visualize_att_map(metrics, att_map, data, data_vis_axes: DataViewAxis):
         ax[1].grid(True)
         ax[2].grid(False)
         fig.subplots_adjust(wspace=0)
-    metrics["att_map"] = fig
-    metrics["frontal_view"] = wandb.Image(data_plot)
+
+    if config.general.private_data:
+        save_dir = (
+            config.general.output_save_folder / f"{wandb.run.name}_{wandb.run.id}"
+        )
+        if not save_dir.is_dir():
+            save_dir.mkdir()
+        fig.savefig(save_dir / f"{logging_step}_att_map.svg")
+
+    else:
+        metrics["att_map"] = fig
+        # metrics["frontal_view"] = wandb.Image(data_plot)
     plt.close(fig)

@@ -6,7 +6,6 @@ import torchmetrics
 import seaborn as sn
 from pathlib import Path
 from tqdm import trange
-from torch.utils.data import DataLoader
 from omegaconf import OmegaConf
 from numpy import mean
 from numpy.random import seed as npseed
@@ -14,7 +13,7 @@ from random import seed as rseed
 
 sys.path.insert(0, str(Path.cwd()))
 
-from twoandahalfdimensions.utils.data import make_data
+from twoandahalfdimensions.utils.data import make_data, make_loader
 from twoandahalfdimensions.utils.training_utils import train, validate
 from twoandahalfdimensions.utils.config import Config, load_config_store
 from twoandahalfdimensions.models.preset_models import make_model_from_config
@@ -69,16 +68,7 @@ def main(config: Config):
     )
     settings = {"device": device, "dtype": torch.float32}
     train_ds, val_ds, test_ds = make_data(config)
-    train_dl, val_dl, test_dl = (
-        DataLoader(
-            train_ds,
-            batch_size=config.hyperparams.train_bs,
-            shuffle=True,
-            **config.loader,
-        ),
-        DataLoader(val_ds, batch_size=config.hyperparams.val_bs, **config.loader),
-        DataLoader(test_ds, batch_size=config.hyperparams.test_bs, **config.loader),
-    )
+    train_dl, val_dl, test_dl = make_loader(config, (train_ds, val_ds, test_ds))
     loss_fn = (
         torch.nn.CrossEntropyLoss()
         if config.model.num_classes > 1
@@ -130,20 +120,24 @@ def main(config: Config):
     )
 
     train_metrics = validate(
+        config,
         train_dl,
         metric_fns,
         model,
         settings,
         activation_fn=activation_fn,
         data_vis_axes=data_view_axes,
+        logging_step=0,
     )
     val_metrics = validate(
+        config,
         val_dl,
         metric_fns,
         model,
         settings,
         activation_fn=activation_fn,
         data_vis_axes=data_view_axes,
+        logging_step=0,
     )
     if config.general.log_wandb:
         wandb.log({"train": train_metrics, "val": val_metrics, "epoch": 0})
@@ -163,31 +157,37 @@ def main(config: Config):
                 }
         if config.general.log_wandb:
             epoch_logging_dict["train"] = validate(
+                config,
                 train_dl,
                 metric_fns,
                 model,
                 settings,
                 activation_fn=activation_fn,
                 data_vis_axes=data_view_axes,
+                logging_step=epoch + 1,
             )
             epoch_logging_dict["train"]["loss"] = mean(losses)
             epoch_logging_dict["val"] = validate(
+                config,
                 val_dl,
                 metric_fns,
                 model,
                 settings,
                 activation_fn=activation_fn,
                 data_vis_axes=data_view_axes,
+                logging_step=epoch + 1,
             )
             epoch_logging_dict["epoch"] = epoch + 1
             wandb.log(epoch_logging_dict)
     test_metrics = validate(
+        config,
         test_dl,
         metric_fns,
         model,
         settings,
         activation_fn=activation_fn,
         data_vis_axes=data_view_axes,
+        logging_step=epoch + 1,
     )
     if config.general.log_wandb:
         wandb.log({"test": test_metrics})

@@ -4,6 +4,7 @@ defaults:
 general:
   force_cpu: False
   log_wandb: False
+  private_data: False
 data:
   name: empty
 wandb: 

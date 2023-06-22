@@ -16,11 +16,20 @@ class GeneralConfig:
     seed: int = 0
     compile: bool = False
     log_images: bool = True
+    private_data: bool = True
+    output_save_folder: Path = MISSING
+
+
+class LoaderType(Enum):
+    torch = 0
+    monai = 1
 
 
 @dataclass
 class DataConfig:
     name: str = MISSING
+    base_path: Optional[Path] = None
+    loader: LoaderType = LoaderType.torch
 
 
 class ModelTypes(Enum):
@@ -64,8 +73,14 @@ class HyperparamConfig:
     opt_args: dict[str, Any] = MISSING
 
 
+class TransformLibrary(Enum):
+    torchio = 0
+    monai = 1
+
+
 @dataclass
 class TransformConfig:
+    tf_library: TransformLibrary = TransformLibrary.torchio
     train_tf: dict[str, Any] = field(default_factory=dict)
     val_tf: dict[str, Any] = field(default_factory=dict)
     test_tf: dict[str, Any] = field(default_factory=dict)

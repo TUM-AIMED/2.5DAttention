@@ -6,21 +6,25 @@ general:
   log_wandb: False
   compile: False
   log_images: True
-  private_data: False
-data:
-  name: empty
-wandb: 
+  private_data: True
+  output_save_folder: out/
+wandb:
   project: twoandahalfdimensions
+  name: pdac_att
+data:
+  name: ct_imagefolder
+  loader: monai
+  base_path: ./data/PDAC_classification
 loader:
-  num_workers: 0
-  # prefetch_factor: 1
+  num_workers: 16
+  prefetch_factor: 2
   pin_memory: True
 model: 
   type: twop5_att
   backbone: resnet18
   data_view_axis: all_sides
   in_channels: 1
-  num_classes: -1
+  num_classes: 1
   feature_dim: 512
   unfreeze: 
     train_mode: 0
@@ -29,14 +33,18 @@ model:
     num_heads: 8
 hyperparams: 
   epochs: 50
-  train_bs: 64
+  train_bs: 4
   val_bs: 64
   test_bs: 64
   opt_args:
     lr: 2e-4
     # weight_decay: 1e-3
   # overfit: 5
-# transforms:
-  # train_tf:
-    # RandomFlip:
-      # flip_probability: 0
+transforms:
+  tf_library: monai
+  train_tf:
+    EnsureChannelFirst:
+  val_tf:
+    EnsureChannelFirst:
+  test_tf:
+    EnsureChannelFirst:
