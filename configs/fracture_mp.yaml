@@ -1,0 +1,9 @@
+defaults:
+  - maxpool_base@_here_
+  - _self_
+wandb:
+  name: fracturemnist3d_maxpool
+data:
+  name: fracturemnist3d
+model: 
+  num_classes: 3

@@ -1,0 +1,9 @@
+defaults:
+  - avgpool_base@_here_
+  - _self_
+wandb:
+  name: adrenalmnist3d_avgpool
+data:
+  name: adrenalmnist3d
+model: 
+  num_classes: 1

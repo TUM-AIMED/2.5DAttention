@@ -5,6 +5,15 @@ from torch import Tensor, nn, stack
 from twoandahalfdimensions.utils.config import DataViewAxis
 
 
+class Lambda(nn.Module):
+    def __init__(self, lambda_expr) -> None:
+        super().__init__()
+        self.lambda_expr = lambda_expr
+
+    def forward(self, x):
+        return self.lambda_expr(x)
+
+
 class TwoAndAHalfDModel(nn.Module, ABC):
     def __init__(
         self,
@@ -50,6 +59,38 @@ class TwoAndAHalfDModel(nn.Module, ABC):
             N_scans, -1, features.shape[-1]
         )  # shape (N_scans, N_slices* view_axes, num_features)
         return features
+
+
+class TwoAndAHalfDPool(TwoAndAHalfDModel):
+    def __init__(
+        self,
+        feature_extractor: nn.Module,
+        classifier: nn.Module,
+        feature_size_in: int,
+        feature_size_out: int,
+        data_view_axis: DataViewAxis,
+        mode: str = "max",
+    ) -> None:
+        super().__init__(
+            feature_extractor,
+            classifier,
+            feature_size_in,
+            feature_size_out,
+            data_view_axis,
+        )
+        assert mode in ["max", "avg"], "only max and average supported"
+        if mode == "max":
+            self.reduce_3d_module = Lambda(lambda x: x.max(1)[0])
+        elif mode == "avg":
+            self.reduce_3d_module = Lambda(lambda x: x.mean(1))
+        else:
+            raise ValueError(f"{mode} not supported")
+
+    def forward(self, x):
+        x = super().forward(x)
+        x = self.reduce_3d_module(x)
+        x = self.classifier(x)
+        return x, None
 
 
 class TwoAndAHalfDAttention(TwoAndAHalfDModel):

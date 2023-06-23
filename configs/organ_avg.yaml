@@ -1,0 +1,9 @@
+defaults:
+  - avgpool_base@_here_
+  - _self_
+wandb:
+  name: organmnist3d_avgpool
+data:
+  name: organmnist3d
+model: 
+  num_classes: 11

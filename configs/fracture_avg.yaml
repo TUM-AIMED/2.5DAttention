@@ -1,0 +1,9 @@
+defaults:
+  - avgpool_base@_here_
+  - _self_
+wandb:
+  name: fracturemnist3d_avgpool
+data:
+  name: fracturemnist3d
+model: 
+  num_classes: 3
