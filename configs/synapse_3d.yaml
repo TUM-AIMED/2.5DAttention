@@ -1,0 +1,10 @@
+defaults:
+  - acs_base@_here_
+  - _self_
+wandb:
+  name: synapsemnist3d_acs
+data:
+  name: synapsemnist3d
+model: 
+  type: acs_3d
+  num_classes: 1

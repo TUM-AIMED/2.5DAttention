@@ -8,23 +8,43 @@ from twoandahalfdimensions.models.twoandahalfdmodel import (
     TwoAndAHalfDPool,
 )
 from twoandahalfdimensions.utils.config import Config, ModelTypes
+from acsconv import converters
+
+
+class FakeAttOutput(nn.Module):
+    def __init__(self, model: nn.Module, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.model: nn.Module = model
+
+    def forward(self, x):
+        return self.model(x), None
+
+
+def is_our_model(type: ModelTypes) -> bool:
+    return type in [
+        ModelTypes.twop5_pool,
+        ModelTypes.twop5_lstm,
+        ModelTypes.twop5_att,
+        ModelTypes.twop5_tf,
+    ]
 
 
 def make_model_from_config(config: Config):
+    our_models: bool = is_our_model(config.model.type)
     if "resnet" in config.model.backbone:
         (
             feature_extractor,
             classifier,
             num_extracted_features,
             num_classified_features,
-        ) = make_resnet(config)
+        ) = make_resnet(config, disassemble_model=our_models)
     elif "vit" in config.model.backbone:
         (
             feature_extractor,
             classifier,
             num_extracted_features,
             num_classified_features,
-        ) = make_vit(config)
+        ) = make_vit(config, disassemble_model=our_models)
     else:
         raise ValueError(f"Model {config.model.backbone} not supported yet")
     model = make_model_adaptions(
@@ -62,19 +82,34 @@ def make_model_adaptions(
             model = TwoAndAHalfDAttention
         case ModelTypes.twop5_tf:
             model = TwoAndAHalfDTransformer
-        case _:
-            raise ValueError(f"Type {config.model.type} not supported yet")
-    return model(
-        feature_extractor,
-        classifier,
-        feature_size_in,
-        feature_size_out,
-        data_view_axis=config.model.data_view_axis,
-        **config.model.additional_args,
-    )
+        case ModelTypes.acs_direct:
+            converter = converters.ACSConverter
+        case ModelTypes.acs_3d:
+            converter = converters.Conv3dConverter
+        case ModelTypes.acs_twop5:
+            converter = converters.Conv2_5dConverter
+        case default:
+            raise ValueError(f"{default} not supported")
+    if is_our_model(config.model.type):
+        return model(
+            feature_extractor,
+            classifier,
+            feature_size_in,
+            feature_size_out,
+            data_view_axis=config.model.data_view_axis,
+            **config.model.additional_args,
+        )
+    else:
+        model: nn.Module = converter(feature_extractor)
+        model = FakeAttOutput(model.model)
+        for p in model.parameters():
+            p.requires_grad_(False)
+        for p in classifier.parameters():
+            p.requires_grad_(True)
+        return model
 
 
-def make_resnet(config: Config):
+def make_resnet(config: Config, disassemble_model=True):
     match config.model.backbone:
         case "resnet18":
             feature_extractor = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
@@ -99,7 +134,10 @@ def make_resnet(config: Config):
         else config.model.feature_dim,
         config.model.num_classes,
     )
-    feature_extractor.fc = nn.Identity()
+    if disassemble_model:
+        feature_extractor.fc = nn.Identity()
+    else:
+        feature_extractor.fc = classifier
     num_classified_features = classifier.weight.shape[1]
     return (
         feature_extractor,
@@ -109,7 +147,7 @@ def make_resnet(config: Config):
     )
 
 
-def make_vit(config: Config):
+def make_vit(config: Config, disassemble_model=True):
     match config.model.backbone:
         case "vit_b_16":
             feature_extractor = models.vit_b_16(models.ViT_B_16_Weights.DEFAULT)
@@ -128,7 +166,10 @@ def make_vit(config: Config):
         else config.model.feature_dim,
         config.model.num_classes,
     )
-    feature_extractor.heads = nn.Identity()
+    if disassemble_model:
+        feature_extractor.heads = nn.Identity()
+    else:
+        feature_extractor.heads = classifier
     num_classified_features = classifier.weight.shape[1]
     return (
         feature_extractor,
