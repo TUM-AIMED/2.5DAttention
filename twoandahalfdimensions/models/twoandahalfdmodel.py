@@ -1,5 +1,5 @@
 from abc import ABC
-from torch import Tensor, nn, stack
+from torch import Tensor, nn, stack, concatenate
 
 
 from twoandahalfdimensions.utils.config import DataViewAxis
@@ -38,25 +38,22 @@ class TwoAndAHalfDModel(nn.Module, ABC):
             feature_list.append(
                 self.feature_extractor(
                     x.permute(0, 2, 1, 3, 4).reshape(N_scans * N_z, C, N_x, N_y)
-                )
+                ).reshape(N_scans, N_z, -1)
             )
         if self.data_view_axis in [DataViewAxis.all_sides, DataViewAxis.only_x]:
             feature_list.append(
                 self.feature_extractor(
                     x.permute(0, 3, 1, 2, 4).reshape(N_scans * N_x, C, N_z, N_y)
-                )
+                ).reshape(N_scans, N_x, -1)
             )
         if self.data_view_axis in [DataViewAxis.all_sides, DataViewAxis.only_y]:
             feature_list.append(
                 self.feature_extractor(
                     x.permute(0, 4, 1, 2, 3).reshape(N_scans * N_y, C, N_z, N_x)
-                )
+                ).reshape(N_scans, N_y, -1)
             )
-        features: Tensor = stack(
+        features: Tensor = concatenate(
             feature_list, dim=1
-        )  # shape (N_scans*N_slices, view_axes, num_features)
-        features = features.reshape(
-            N_scans, -1, features.shape[-1]
         )  # shape (N_scans, N_slices* view_axes, num_features)
         return features
 

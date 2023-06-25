@@ -6,6 +6,7 @@ general:
   log_wandb: False
   compile: False
   log_images: True
+  private_data: False
 data:
   name: empty
 wandb: 

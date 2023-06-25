@@ -5,35 +5,46 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 from typing import Optional
 
-from twoandahalfdimensions.utils.config import DataViewAxis
+from twoandahalfdimensions.utils.config import DataViewAxis, Config
 
 
-def train_step(data, label, model, opt, loss_fn, settings):
-    opt.zero_grad()
+def train_step(data, label, model, opt, loss_fn, settings, do_step=True):
     data = data.to(**settings)
     pred, att_map = model(data)
     loss = loss_fn(pred.squeeze(), label.to(device=settings["device"]).squeeze())
     loss.backward()
-    opt.step()
+    if do_step:
+        opt.step()
+        opt.zero_grad()
     return loss.detach().item()
 
 
-def train(train_dl, model, opt, loss_fn, settings):
-    pbar = tqdm(train_dl, total=len(train_dl), desc="Training", leave=False)
+def train(train_dl, model, opt, loss_fn, settings, grad_acc_steps=1):
+    pbar = tqdm(enumerate(train_dl), total=len(train_dl), desc="Training", leave=False)
     losses = []
-    for data, label in pbar:
-        loss = train_step(data, label, model, opt, loss_fn, settings)
+    for i, (data, label) in pbar:
+        loss = train_step(
+            data,
+            label,
+            model,
+            opt,
+            loss_fn,
+            settings,
+            do_step=((i + 1) % grad_acc_steps) == 0,
+        )
         losses.append(loss)
         pbar.set_description_str(f"Loss: {loss:.3f}")
     return losses
 
 
 def validate(
+    config: Config,
     val_dl,
     metric_fns,
     model,
     settings,
     activation_fn: torch.nn.Module,
+    logging_step: int,
     data_vis_axes: Optional[DataViewAxis] = None,
 ):
     with torch.inference_mode():
@@ -50,16 +61,29 @@ def validate(
             torch.vstack(preds).squeeze(),
             torch.concatenate(labels).squeeze(),
         )
+        if preds is not torch.Tensor:
+            preds = torch.Tensor(preds)
+        if labels is not torch.Tensor:
+            labels = torch.Tensor(labels)
         metrics = {
             name: metric_fn(preds, labels).item()
             for name, metric_fn in metric_fns.items()
         }
         if data_vis_axes and att_map is not None:
-            visualize_att_map(metrics, att_map, data, data_vis_axes)
+            visualize_att_map(
+                config, metrics, att_map, data, data_vis_axes, logging_step
+            )
     return metrics
 
 
-def visualize_att_map(metrics, att_map, data, data_vis_axes: DataViewAxis):
+def visualize_att_map(
+    config: Config,
+    metrics,
+    att_map,
+    data,
+    data_vis_axes: DataViewAxis,
+    logging_step: int,
+):
     BATCH_INDEX = -1
     att_map_numpy = att_map.cpu().numpy()[BATCH_INDEX]  # [::-1]
     data_numpy = data.cpu().numpy()[BATCH_INDEX]  # (C, Z, X, Y)
@@ -139,6 +163,15 @@ def visualize_att_map(metrics, att_map, data, data_vis_axes: DataViewAxis):
         ax[1].grid(True)
         ax[2].grid(False)
         fig.subplots_adjust(wspace=0)
-    metrics["att_map"] = fig
-    metrics["frontal_view"] = wandb.Image(data_plot)
+
+    if config.general.private_data:
+        save_dir = (
+            config.general.output_save_folder / f"{wandb.run.name}_{wandb.run.id}"
+        )
+        save_dir.mkdir(exist_ok=True)
+        fig.savefig(save_dir / f"{logging_step}_att_map.svg")
+
+    else:
+        metrics["att_map"] = fig
+        # metrics["frontal_view"] = wandb.Image(data_plot)
     plt.close(fig)
