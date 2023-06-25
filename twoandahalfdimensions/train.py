@@ -145,7 +145,14 @@ def main(config: Config):
         epoch_logging_dict = {}
         if epoch > config.model.unfreeze.train_mode:
             model.train()
-        losses = train(train_dl, model, opt, loss_fn, settings)
+        losses = train(
+            train_dl,
+            model,
+            opt,
+            loss_fn,
+            settings,
+            grad_acc_steps=config.hyperparams.grad_acc_steps,
+        )
         model.eval()
         if epoch == config.model.unfreeze.feature_extractor:
             for param in model.feature_extractor.parameters():
@@ -191,6 +198,15 @@ def main(config: Config):
     )
     if config.general.log_wandb:
         wandb.log({"test": test_metrics})
+    if config.general.output_save_folder:
+        save_dir: Path = (
+            config.general.output_save_folder / f"{wandb.run.name}_{wandb.run.id}"
+        )
+        save_dir.mkdir(exist_ok=True, parents=False)
+        torch.save(
+            {"config": config, "model_weights": model.state_dict()},
+            config.general.output_save_folder / "final_state.pt",
+        )
 
 
 if __name__ == "__main__":

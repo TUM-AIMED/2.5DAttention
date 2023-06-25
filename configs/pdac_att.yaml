@@ -1,10 +1,7 @@
 defaults:
-  - base_config
+  - att_base@_here_
   - _self_
 general:
-  force_cpu: False
-  log_wandb: False
-  compile: False
   log_images: True
   private_data: True
   output_save_folder: out/
@@ -17,29 +14,14 @@ data:
   base_path: ./data/PDAC_classification
 loader:
   num_workers: 16
-  prefetch_factor: 2
-  pin_memory: True
-model: 
-  type: twop5_att
-  backbone: resnet18
-  data_view_axis: all_sides
-  in_channels: 1
+  prefetch_factor: 4
+model:
   num_classes: 1
-  feature_dim: 512
-  unfreeze: 
-    train_mode: 0
-    feature_extractor: 2
-  additional_args:
-    num_heads: 8
 hyperparams: 
-  epochs: 50
-  train_bs: 4
-  val_bs: 64
-  test_bs: 64
-  opt_args:
-    lr: 2e-4
-    # weight_decay: 1e-3
-  # overfit: 5
+  train_bs: 2
+  val_bs: 16
+  test_bs: 16
+  grad_acc_steps: 32
 transforms:
   tf_library: monai
   train_tf:

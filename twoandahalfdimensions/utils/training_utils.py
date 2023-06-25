@@ -8,21 +8,30 @@ from typing import Optional
 from twoandahalfdimensions.utils.config import DataViewAxis, Config
 
 
-def train_step(data, label, model, opt, loss_fn, settings):
-    opt.zero_grad()
+def train_step(data, label, model, opt, loss_fn, settings, do_step=True):
     data = data.to(**settings)
     pred, att_map = model(data)
     loss = loss_fn(pred.squeeze(), label.to(device=settings["device"]).squeeze())
     loss.backward()
-    opt.step()
+    if do_step:
+        opt.step()
+        opt.zero_grad()
     return loss.detach().item()
 
 
-def train(train_dl, model, opt, loss_fn, settings):
-    pbar = tqdm(train_dl, total=len(train_dl), desc="Training", leave=False)
+def train(train_dl, model, opt, loss_fn, settings, grad_acc_steps=1):
+    pbar = tqdm(enumerate(train_dl), total=len(train_dl), desc="Training", leave=False)
     losses = []
-    for data, label in pbar:
-        loss = train_step(data, label, model, opt, loss_fn, settings)
+    for i, (data, label) in pbar:
+        loss = train_step(
+            data,
+            label,
+            model,
+            opt,
+            loss_fn,
+            settings,
+            do_step=((i + 1) % grad_acc_steps) == 0,
+        )
         losses.append(loss)
         pbar.set_description_str(f"Loss: {loss:.3f}")
     return losses
@@ -159,8 +168,7 @@ def visualize_att_map(
         save_dir = (
             config.general.output_save_folder / f"{wandb.run.name}_{wandb.run.id}"
         )
-        if not save_dir.is_dir():
-            save_dir.mkdir()
+        save_dir.mkdir(exist_ok=True)
         fig.savefig(save_dir / f"{logging_step}_att_map.svg")
 
     else:

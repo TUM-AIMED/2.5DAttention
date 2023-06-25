@@ -69,6 +69,7 @@ class HyperparamConfig:
     train_bs: int = MISSING
     val_bs: int = MISSING
     test_bs: int = MISSING
+    grad_acc_steps: int = 1
     overfit: Optional[int] = None
     opt_args: dict[str, Any] = MISSING
 
