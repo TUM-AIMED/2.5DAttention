@@ -15,6 +15,7 @@ dependencies:
   - conda-forge::scikit-learn
   - conda-forge::torchmetrics
   - conda-forge::monai
+  - conda-forge::ACSConv
   - pip
   - pip: 
     - medmnist

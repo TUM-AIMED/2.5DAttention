@@ -1,0 +1,10 @@
+defaults:
+  - acs_base@_here_
+  - _self_
+wandb:
+  name: vesselmnist3d_acs
+data:
+  name: vesselmnist3d
+model: 
+  type: acs_direct
+  num_classes: 1

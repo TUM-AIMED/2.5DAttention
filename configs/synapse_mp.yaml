@@ -1,0 +1,9 @@
+defaults:
+  - maxpool_base@_here_
+  - _self_
+wandb:
+  name: synapsemnist3d_maxpool
+data:
+  name: synapsemnist3d
+model: 
+  num_classes: 1

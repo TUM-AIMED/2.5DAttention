@@ -17,6 +17,7 @@ from twoandahalfdimensions.utils.data import make_data, make_loader
 from twoandahalfdimensions.utils.training_utils import train, validate
 from twoandahalfdimensions.utils.config import Config, load_config_store
 from twoandahalfdimensions.models.preset_models import make_model_from_config
+from twoandahalfdimensions.models.twoandahalfdmodel import TwoAndAHalfDModel
 
 sn.set_theme(
     context="notebook",
@@ -86,9 +87,18 @@ def main(config: Config):
     opt = torch.optim.NAdam(model.parameters(), **config.hyperparams.opt_args)
 
     N_params_total = get_num_params(model)
-    N_params_feature_extractor = get_num_params(model.feature_extractor)
-    N_params_classifier = get_num_params(model.classifier)
-    N_params_reduce = get_num_params(model.reduce_3d_module)
+    param_dict = {"num_params": {"total": N_params_total}}
+    if isinstance(model, TwoAndAHalfDModel):
+        N_params_feature_extractor = get_num_params(model.feature_extractor)
+        N_params_classifier = get_num_params(model.classifier)
+        N_params_reduce = get_num_params(model.reduce_3d_module)
+        param_dict["num_params"].update(
+            {
+                "feature_extractor": N_params_feature_extractor,
+                "classifier": N_params_classifier,
+                "2.5DModule": N_params_reduce,
+            }
+        )
     if config.general.log_wandb:
         config_dict = OmegaConf.to_container(config)
         wandb.init(
@@ -97,22 +107,11 @@ def main(config: Config):
             reinit=True,
             **config_dict["wandb"],
         )
-        wandb.log(
-            {
-                "num_params": {
-                    "total": N_params_total,
-                    "feature_extractor": N_params_feature_extractor,
-                    "classifier": N_params_classifier,
-                    "2.5DModule": N_params_reduce,
-                }
-            }
-        )
+        wandb.log(param_dict)
     else:
         print("Model parameters:")
-        print(f"\tTotal: {N_params_total:,}")
-        print(f"\tFeature Extractor: {N_params_feature_extractor:,}")
-        print(f"\tClassifier: {N_params_classifier:,}")
-        print(f"\t2.5D Module: {N_params_reduce:,}")
+        for key, val in param_dict["num_params"].items():
+            print(f"\t{key}: {val:,}")
     data_view_axes = (
         config.model.data_view_axis
         if config.general.log_wandb and config.general.log_images
@@ -155,13 +154,15 @@ def main(config: Config):
         )
         model.eval()
         if epoch == config.model.unfreeze.feature_extractor:
-            for param in model.feature_extractor.parameters():
+            for param in model.parameters():
                 param.requires_grad_(True)
             if config.general.log_wandb:
-                epoch_logging_dict["num_params"] = {
-                    "feature_extractor": get_num_params(model.feature_extractor),
-                    "total": get_num_params(model),
-                }
+                param_dict = {"total": get_num_params(model)}
+                if isinstance(model, TwoAndAHalfDModel):
+                    param_dict.update(
+                        {"feature_extractor": get_num_params(model.feature_extractor)}
+                    )
+                epoch_logging_dict["num_params"] = param_dict
         if config.general.log_wandb:
             epoch_logging_dict["train"] = validate(
                 config,

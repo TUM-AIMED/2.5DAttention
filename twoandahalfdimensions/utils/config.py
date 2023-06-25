@@ -33,9 +33,13 @@ class DataConfig:
 
 
 class ModelTypes(Enum):
-    twop5_lstm = 0
-    twop5_att = 1
-    twop5_tf = 2
+    twop5_pool = 0
+    twop5_lstm = 1
+    twop5_att = 2
+    twop5_tf = 3
+    acs_direct = 4
+    acs_3d = 5
+    acs_twop5 = 6
 
 
 class DataViewAxis(Enum):

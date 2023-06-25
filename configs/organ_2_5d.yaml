@@ -1,0 +1,10 @@
+defaults:
+  - acs_base@_here_
+  - _self_
+wandb:
+  name: organmnist3d_acs_2_5
+data:
+  name: organmnist3d
+model: 
+  type: acs_twop5
+  num_classes: 11

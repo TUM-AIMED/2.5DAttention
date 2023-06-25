@@ -1,0 +1,10 @@
+defaults:
+  - acs_base@_here_
+  - _self_
+wandb:
+  name: adrenalmnist3d_3d
+data:
+  name: adrenalmnist3d
+model: 
+  type: acs_3d
+  num_classes: 1
