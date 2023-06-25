@@ -1,8 +1,8 @@
 defaults:
-  - att_base@_here_
+  - acs_base@_here_
   - _self_
 wandb:
-  name: fracturemnist3d_att
+  name: fracturemnist3d_2_5d
 data:
   name: fracturemnist3d
 model: 
