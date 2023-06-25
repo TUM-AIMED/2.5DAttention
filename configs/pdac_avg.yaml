@@ -1,0 +1,32 @@
+defaults:
+  - avgpool_base@_here_
+  - _self_
+general:
+  log_images: True
+  private_data: True
+  output_save_folder: out/
+wandb:
+  project: twoandahalfdimensions
+  name: pdac_avgpool
+data:
+  name: ct_imagefolder
+  loader: monai
+  base_path: ./data/PDAC_classification
+loader:
+  num_workers: 16
+  prefetch_factor: 4
+model:
+  num_classes: 1
+hyperparams: 
+  train_bs: 2
+  val_bs: 16
+  test_bs: 16
+  grad_acc_steps: 32
+transforms:
+  tf_library: monai
+  train_tf:
+    EnsureChannelFirst:
+  val_tf:
+    EnsureChannelFirst:
+  test_tf:
+    EnsureChannelFirst:
