@@ -2,7 +2,7 @@ defaults:
   - acs_base@_here_
   - _self_
 wandb:
-  name: nodulemnist3d_acs
+  name: nodulemnist3d_3d
 data:
   name: nodulemnist3d
 model: 

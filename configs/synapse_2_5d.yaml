@@ -2,7 +2,7 @@ defaults:
   - acs_base@_here_
   - _self_
 wandb:
-  name: synapsemnist3d_acs
+  name: synapsemnist3d_2_5
 data:
   name: synapsemnist3d
 model: 

@@ -2,7 +2,7 @@ defaults:
   - acs_base@_here_
   - _self_
 wandb:
-  name: fracturemnist3d_acs
+  name: fracturemnist3d_3d
 data:
   name: fracturemnist3d
 model: 

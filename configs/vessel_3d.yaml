@@ -2,7 +2,7 @@ defaults:
   - acs_base@_here_
   - _self_
 wandb:
-  name: vesselmnist3d_acs
+  name: vesselmnist3d_3d
 data:
   name: vesselmnist3d
 model: 
