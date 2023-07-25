@@ -2,20 +2,18 @@ import sys
 import hydra
 import torch
 import wandb
-import torchmetrics
 import seaborn as sn
 from pathlib import Path
 from tqdm import trange
 from omegaconf import OmegaConf
 from numpy import mean
-from numpy.random import seed as npseed
-from random import seed as rseed
 
 sys.path.insert(0, str(Path.cwd()))
 
 from twoandahalfdimensions.utils.data import make_data, make_loader
 from twoandahalfdimensions.utils.training_utils import train, validate
 from twoandahalfdimensions.utils.config import Config, load_config_store
+from twoandahalfdimensions.utils.setup import setup
 from twoandahalfdimensions.models.preset_models import make_model_from_config
 from twoandahalfdimensions.models.twoandahalfdmodel import TwoAndAHalfDModel
 from datetime import datetime
@@ -48,36 +46,13 @@ get_num_params = lambda model: sum(
 
 @hydra.main(version_base=None, config_path=str(Path.cwd() / "configs"))
 def main(config: Config):
-    torch.manual_seed(config.general.seed)
-    npseed(config.general.seed)
-    rseed(config.general.seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-    task = "multiclass" if config.model.num_classes > 1 else "binary"
-    num_classes = config.model.num_classes if config.model.num_classes > 1 else None
-    metric_fns = {
-        "mcc": torchmetrics.MatthewsCorrCoef(task=task, num_classes=num_classes),
-        "AUROC": torchmetrics.AUROC(task=task, num_classes=num_classes),
-        "F1-Score": torchmetrics.F1Score(task=task, num_classes=num_classes),
-        "accuracy": torchmetrics.Accuracy(task=task, num_classes=num_classes),
-    }
-
-    device = (
-        torch.device("cuda")
-        if torch.cuda.is_available() and not config.general.force_cpu
-        else torch.device("cpu")
-    )
-    settings = {"device": device, "dtype": torch.float32}
+    metric_fns, settings, activation_fn = setup(config)
     train_ds, val_ds, test_ds = make_data(config)
     train_dl, val_dl, test_dl = make_loader(config, (train_ds, val_ds, test_ds))
     loss_fn = (
         torch.nn.CrossEntropyLoss()
         if config.model.num_classes > 1
         else torch.nn.BCEWithLogitsLoss()
-    )
-    activation_fn = (
-        torch.nn.Softmax(dim=1) if config.model.num_classes > 1 else torch.nn.Sigmoid()
     )
     model = make_model_from_config(config)
     model.eval()
