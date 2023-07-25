@@ -24,8 +24,6 @@ hyperparams:
   val_bs: 16
   test_bs: 16
   grad_acc_steps: 32
-  opt_args:
-    weight_decay: 1e-3
 transforms:
   tf_library: monai
   train_tf:
