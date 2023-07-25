@@ -14,7 +14,7 @@ data:
   base_path: ./data/PDAC_classification
 loader:
   num_workers: 16
-  prefetch_factor: 4
+  prefetch_factor: 8
 model:
   num_classes: 1
 hyperparams: 
@@ -22,10 +22,23 @@ hyperparams:
   val_bs: 16
   test_bs: 16
   grad_acc_steps: 32
+  opt_args:
+    weight_decay: 1e-3
 transforms:
   tf_library: monai
   train_tf:
     EnsureChannelFirst:
+    tf_list:
+      - RandFlip:
+          prob: 0.3
+          spatial_axis: 0
+      - RandFlip:
+          prob: 0.3
+          spatial_axis: 1
+    RandZoom:
+      prob: 0.2
+    RandAffine:
+      prob: 0.2
   val_tf:
     EnsureChannelFirst:
   test_tf:

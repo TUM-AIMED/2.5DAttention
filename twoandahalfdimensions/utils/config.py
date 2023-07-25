@@ -17,7 +17,7 @@ class GeneralConfig:
     compile: bool = False
     log_images: bool = True
     private_data: bool = True
-    output_save_folder: Path = MISSING
+    output_save_folder: Optional[Path] = None
 
 
 class LoaderType(Enum):

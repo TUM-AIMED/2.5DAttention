@@ -18,6 +18,7 @@ from twoandahalfdimensions.utils.training_utils import train, validate
 from twoandahalfdimensions.utils.config import Config, load_config_store
 from twoandahalfdimensions.models.preset_models import make_model_from_config
 from twoandahalfdimensions.models.twoandahalfdmodel import TwoAndAHalfDModel
+from datetime import datetime
 
 sn.set_theme(
     context="notebook",
@@ -200,13 +201,19 @@ def main(config: Config):
     if config.general.log_wandb:
         wandb.log({"test": test_metrics})
     if config.general.output_save_folder:
-        save_dir: Path = (
-            config.general.output_save_folder / f"{wandb.run.name}_{wandb.run.id}"
-        )
+        if config.general.log_wandb:
+            save_dir: Path = (
+                config.general.output_save_folder / f"{wandb.run.name}_{wandb.run.id}"
+            )
+        else:
+            save_dir: Path = (
+                config.general.output_save_folder
+                / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+            )
         save_dir.mkdir(exist_ok=True, parents=False)
         torch.save(
             {"config": config, "model_weights": model.state_dict()},
-            config.general.output_save_folder / "final_state.pt",
+            save_dir / "final_state.pt",
         )
 
 
