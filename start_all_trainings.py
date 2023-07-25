@@ -3,8 +3,8 @@ from subprocess import Popen
 from pathlib import Path
 
 # %%
-method_names = ["att", "lstm", "tf", "acs", "2_5d", "3d", "mp", "avg"]
-dataset_names = ["organ", "nodule", "fracture", "adrenal", "vessel", "synapse"]
+method_names = ["acs", "2_5d", "3d", "mp", "avg"]
+dataset_names = ["pdac"]
 
 configs = {
     d_name: [f"{d_name}_{m_name}.yaml" for m_name in method_names]
@@ -23,7 +23,7 @@ for c_list in configs.values():
 # %%
 commands = {
     k: [
-        f"python twoandahalfdimensions/train.py -m -cn {c} general.log_wandb=True general.seed=1,2,3,4".split(
+        f"python twoandahalfdimensions/train.py -cn {c} general.log_wandb=True general.seed=0".split(
             " "
         )
         # f"python -c \"print('hello_world')\"".split(" ")
@@ -36,7 +36,7 @@ commands = {
 for dataset, command_list in commands.items():
     handles = []
     for cmd in command_list:
-        handles.append(Popen(cmd))
-    [h.communicate() for h in handles]
+        h = Popen(cmd)
+        h.communicate()
 
 # %%
