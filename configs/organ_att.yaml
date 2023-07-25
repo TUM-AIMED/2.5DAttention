@@ -1,6 +1,8 @@
 defaults:
   - att_base@_here_
   - _self_
+general:
+  output_save_folder: out/
 wandb:
   name: organmnist3d_att
 data:

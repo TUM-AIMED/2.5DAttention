@@ -28,10 +28,18 @@ def make_transforms(config: Config, tf_dict: dict[str, Any]):
             tf_module_dict = dict_from_module(mtf)
         case default:
             raise ValueError(f"{default} transform library not supported")
-    list_tfs = [
-        tf_module_dict[tf](**kwargs) if kwargs is not None else tf_module_dict[tf]()
-        for tf, kwargs in tf_dict.items()
-    ]
+    list_tfs = []
+    for tf, kwargs in tf_dict.items():
+        if tf == "tf_list":
+            new_tf = tf_module_dict["Compose"](
+                make_transforms(config, tf_subdict) for tf_subdict in kwargs
+            )
+        else:
+            if kwargs is not None:
+                new_tf = tf_module_dict[tf](**kwargs)
+            else:
+                new_tf = tf_module_dict[tf]()
+        list_tfs.append(new_tf)
     return tf_module_dict["Compose"](list_tfs)
 
 

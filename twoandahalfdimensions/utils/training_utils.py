@@ -70,20 +70,23 @@ def validate(
             for name, metric_fn in metric_fns.items()
         }
         if data_vis_axes and att_map is not None:
-            visualize_att_map(
-                config, metrics, att_map, data, data_vis_axes, logging_step
-            )
+            fig = visualize_att_map(att_map, data, data_vis_axes)
+            if config.general.private_data:
+                save_dir = (
+                    config.general.output_save_folder
+                    / f"{wandb.run.name}_{wandb.run.id}"
+                )
+                save_dir.mkdir(exist_ok=True)
+                fig.savefig(save_dir / f"{logging_step}_att_map.svg")
+
+            else:
+                metrics["att_map"] = fig
+                # metrics["frontal_view"] = wandb.Image(data_plot)
+            plt.close(fig)
     return metrics
 
 
-def visualize_att_map(
-    config: Config,
-    metrics,
-    att_map,
-    data,
-    data_vis_axes: DataViewAxis,
-    logging_step: int,
-):
+def visualize_att_map(att_map, data, data_vis_axes: DataViewAxis):
     BATCH_INDEX = -1
     att_map_numpy = att_map.cpu().numpy()[BATCH_INDEX]  # [::-1]
     data_numpy = data.cpu().numpy()[BATCH_INDEX]  # (C, Z, X, Y)
@@ -163,15 +166,4 @@ def visualize_att_map(
         ax[1].grid(True)
         ax[2].grid(False)
         fig.subplots_adjust(wspace=0)
-
-    if config.general.private_data:
-        save_dir = (
-            config.general.output_save_folder / f"{wandb.run.name}_{wandb.run.id}"
-        )
-        save_dir.mkdir(exist_ok=True)
-        fig.savefig(save_dir / f"{logging_step}_att_map.svg")
-
-    else:
-        metrics["att_map"] = fig
-        # metrics["frontal_view"] = wandb.Image(data_plot)
-    plt.close(fig)
+    return fig
