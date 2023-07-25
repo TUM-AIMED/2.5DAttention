@@ -46,6 +46,7 @@ def validate(
     activation_fn: torch.nn.Module,
     logging_step: int,
     data_vis_axes: Optional[DataViewAxis] = None,
+    return_raw_predictions: bool = False,
 ):
     with torch.inference_mode():
         preds, labels = [], []
@@ -83,7 +84,8 @@ def validate(
                 metrics["att_map"] = fig
                 # metrics["frontal_view"] = wandb.Image(data_plot)
             plt.close(fig)
-    return metrics
+    pred_label = (preds, labels) if return_raw_predictions else None
+    return metrics, pred_label
 
 
 def visualize_att_map(att_map, data, data_vis_axes: DataViewAxis):
