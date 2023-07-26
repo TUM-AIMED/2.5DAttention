@@ -92,6 +92,16 @@ class TransformConfig:
 
 
 @dataclass
+class PrivacyConfig:
+    use_privacy: bool = False
+    fix_model_for_privacy: bool = False
+    epsilon: float = MISSING
+    delta: float = MISSING
+    clip_norm: float = MISSING
+    accountant: str = "prv"
+
+
+@dataclass
 class Config:
     general: GeneralConfig = field(default_factory=GeneralConfig)
     data: DataConfig = field(default_factory=DataConfig)
@@ -100,6 +110,7 @@ class Config:
     hyperparams: HyperparamConfig = field(default_factory=HyperparamConfig)
     wandb: dict[str, Any] = field(default_factory=dict)
     transforms: TransformConfig = field(default_factory=TransformConfig)
+    privacy: PrivacyConfig = field(default_factory=PrivacyConfig)
 
 
 def load_config_store():

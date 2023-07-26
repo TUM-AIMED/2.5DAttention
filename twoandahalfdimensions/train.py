@@ -7,6 +7,9 @@ from pathlib import Path
 from tqdm import trange
 from omegaconf import OmegaConf
 from numpy import mean
+from opacus import PrivacyEngine, validators
+from opacus.utils.batch_memory_manager import BatchMemoryManager
+from copy import deepcopy
 
 sys.path.insert(0, str(Path.cwd()))
 
@@ -55,12 +58,47 @@ def main(config: Config):
         else torch.nn.BCEWithLogitsLoss()
     )
     model = make_model_from_config(config)
-    model.eval()
 
     model = model.to(**settings)
     if config.general.compile:
         model = torch.compile(model)
+    if config.privacy.fix_model_for_privacy:
+        trained_params = []
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                trained_params.append(name)
+            param.requires_grad = True
+        model = validators.ModuleValidator.fix(model)
+        for name, param in model.named_parameters():
+            if name in trained_params:
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
     opt = torch.optim.NAdam(model.parameters(), **config.hyperparams.opt_args)
+    if config.privacy.use_privacy:
+        assert (
+            config.privacy.fix_model_for_privacy
+        ), "If privacy is turned on we need to fix the model"
+        assert (
+            config.model.unfreeze.train_mode < 0
+        ), "Opacus can only operate in train mode"
+        original_model = deepcopy(model)
+        original_dl = deepcopy(train_dl)
+        engine = PrivacyEngine(accountant=config.privacy.accountant)
+        model, opt, train_dl = engine.make_private_with_epsilon(
+            module=model,
+            optimizer=opt,
+            data_loader=train_dl,
+            target_epsilon=config.privacy.epsilon,
+            target_delta=config.privacy.delta,
+            epochs=config.hyperparams.epochs,
+            max_grad_norm=config.privacy.clip_norm,
+        )
+        train_dl = BatchMemoryManager(
+            data_loader=train_dl,
+            max_physical_batch_size=config.hyperparams.train_bs,
+            optimizer=opt,
+        )
 
     N_params_total = get_num_params(model)
     param_dict = {"num_params": {"total": N_params_total}}
@@ -94,9 +132,10 @@ def main(config: Config):
         else None
     )
 
-    train_metrics = validate(
+    model.eval()
+    train_metrics, _ = validate(
         config,
-        train_dl,
+        train_dl.__enter__() if isinstance(train_dl, BatchMemoryManager) else train_dl,
         metric_fns,
         model,
         settings,
@@ -104,7 +143,7 @@ def main(config: Config):
         data_vis_axes=data_view_axes,
         logging_step=0,
     )
-    val_metrics = validate(
+    val_metrics, _ = validate(
         config,
         val_dl,
         metric_fns,
@@ -121,17 +160,37 @@ def main(config: Config):
         if epoch > config.model.unfreeze.train_mode:
             model.train()
         losses = train(
-            train_dl,
+            train_dl.__enter__()
+            if isinstance(train_dl, BatchMemoryManager)
+            else train_dl,
             model,
             opt,
             loss_fn,
             settings,
-            grad_acc_steps=config.hyperparams.grad_acc_steps,
+            config=config,
         )
-        model.eval()
         if epoch == config.model.unfreeze.feature_extractor:
+            if config.privacy.use_privacy:
+                original_model.load_state_dict(model._module.state_dict())
             for param in model.parameters():
-                param.requires_grad_(True)
+                param.requires_grad = True
+            if config.privacy.use_privacy:
+                engine = PrivacyEngine(accountant=config.privacy.accountant)
+                model, opt, priv_dl = engine.make_private(
+                    module=original_model,
+                    optimizer=torch.optim.NAdam(
+                        original_model.parameters(), **config.hyperparams.opt_args
+                    ),
+                    data_loader=original_dl,
+                    noise_multiplier=opt.noise_multiplier,
+                    max_grad_norm=config.privacy.clip_norm,
+                )
+                train_dl = BatchMemoryManager(
+                    data_loader=priv_dl,
+                    max_physical_batch_size=config.hyperparams.train_bs,
+                    optimizer=opt,
+                )
+
             if config.general.log_wandb:
                 param_dict = {"total": get_num_params(model)}
                 if isinstance(model, TwoAndAHalfDModel):
@@ -139,10 +198,13 @@ def main(config: Config):
                         {"feature_extractor": get_num_params(model.feature_extractor)}
                     )
                 epoch_logging_dict["num_params"] = param_dict
+        model.eval()
         if config.general.log_wandb:
-            epoch_logging_dict["train"] = validate(
+            epoch_logging_dict["train"], _ = validate(
                 config,
-                train_dl,
+                train_dl.__enter__()
+                if isinstance(train_dl, BatchMemoryManager)
+                else train_dl,
                 metric_fns,
                 model,
                 settings,
@@ -151,7 +213,7 @@ def main(config: Config):
                 logging_step=epoch + 1,
             )
             epoch_logging_dict["train"]["loss"] = mean(losses)
-            epoch_logging_dict["val"] = validate(
+            epoch_logging_dict["val"], _ = validate(
                 config,
                 val_dl,
                 metric_fns,
@@ -163,7 +225,7 @@ def main(config: Config):
             )
             epoch_logging_dict["epoch"] = epoch + 1
             wandb.log(epoch_logging_dict)
-    test_metrics = validate(
+    test_metrics, _ = validate(
         config,
         test_dl,
         metric_fns,
