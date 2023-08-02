@@ -21,3 +21,4 @@ dependencies:
     - medmnist
     - hydra-core
     - torchio
+    - PrivateModelArchitectures

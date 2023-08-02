@@ -133,28 +133,28 @@ def main(config: Config):
     )
 
     model.eval()
-    train_metrics, _ = validate(
-        config,
-        train_dl.__enter__() if isinstance(train_dl, BatchMemoryManager) else train_dl,
-        metric_fns,
-        model,
-        settings,
-        activation_fn=activation_fn,
-        data_vis_axes=data_view_axes,
-        logging_step=0,
-    )
-    val_metrics, _ = validate(
-        config,
-        val_dl,
-        metric_fns,
-        model,
-        settings,
-        activation_fn=activation_fn,
-        data_vis_axes=data_view_axes,
-        logging_step=0,
-    )
-    if config.general.log_wandb:
-        wandb.log({"train": train_metrics, "val": val_metrics, "epoch": 0})
+    # train_metrics, _ = validate(
+    #     config,
+    #     train_dl.__enter__() if isinstance(train_dl, BatchMemoryManager) else train_dl,
+    #     metric_fns,
+    #     model,
+    #     settings,
+    #     activation_fn=activation_fn,
+    #     data_vis_axes=data_view_axes,
+    #     logging_step=0,
+    # )
+    # val_metrics, _ = validate(
+    #     config,
+    #     val_dl,
+    #     metric_fns,
+    #     model,
+    #     settings,
+    #     activation_fn=activation_fn,
+    #     data_vis_axes=data_view_axes,
+    #     logging_step=0,
+    # )
+    # if config.general.log_wandb:
+    #     wandb.log({"train": train_metrics, "val": val_metrics, "epoch": 0})
     for epoch in trange(config.hyperparams.epochs, desc="Epochs", leave=False):
         epoch_logging_dict = {}
         if epoch > config.model.unfreeze.train_mode:
@@ -172,17 +172,21 @@ def main(config: Config):
         if epoch == config.model.unfreeze.feature_extractor:
             if config.privacy.use_privacy:
                 original_model.load_state_dict(model._module.state_dict())
+                model = original_model
+                priv_opt = opt
+                opt = torch.optim.NAdam(
+                    model.parameters(), **config.hyperparams.opt_args
+                )
+                opt.load_state_dict(priv_opt.original_optimizer.state_dict())
             for param in model.parameters():
                 param.requires_grad = True
             if config.privacy.use_privacy:
                 engine = PrivacyEngine(accountant=config.privacy.accountant)
                 model, opt, priv_dl = engine.make_private(
-                    module=original_model,
-                    optimizer=torch.optim.NAdam(
-                        original_model.parameters(), **config.hyperparams.opt_args
-                    ),
+                    module=model,
+                    optimizer=opt,
                     data_loader=original_dl,
-                    noise_multiplier=opt.noise_multiplier,
+                    noise_multiplier=priv_opt.noise_multiplier,
                     max_grad_norm=config.privacy.clip_norm,
                 )
                 train_dl = BatchMemoryManager(

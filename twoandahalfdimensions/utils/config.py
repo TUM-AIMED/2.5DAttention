@@ -53,6 +53,7 @@ class DataViewAxis(Enum):
 class UnfreezeConfig:
     train_mode: int = -1
     feature_extractor: int = -1
+    start_only_new_layers_trainable: bool = True
 
 
 @dataclass

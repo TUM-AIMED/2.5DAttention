@@ -1,0 +1,27 @@
+defaults:
+  - acs_base@_here_
+  - _self_
+wandb:
+  name: organmnist3d_acs_priv
+data:
+  name: organmnist3d
+model: 
+  type: acs_direct
+  num_classes: 11
+  backbone: resnet9
+  feature_dim: 2048
+  unfreeze:
+    train_mode: -1
+    feature_extractor: 0
+hyperparams: 
+  train_bs: 2
+  val_bs: 2
+  test_bs: 2
+  grad_acc_steps: 128
+privacy:
+  use_privacy: True
+  fix_model_for_privacy: True
+  epsilon: 8
+  delta: 1e-3
+  clip_norm: 1
+  accountant: gdp
