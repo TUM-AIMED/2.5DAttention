@@ -16,6 +16,7 @@ dependencies:
   - conda-forge::torchmetrics
   - conda-forge::monai
   - conda-forge::ACSConv
+  - conda-forge::opacus>=1.4
   - pip
   - pip: 
     - medmnist

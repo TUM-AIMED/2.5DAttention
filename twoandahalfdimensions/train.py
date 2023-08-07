@@ -62,18 +62,18 @@ def main(config: Config):
     model = model.to(**settings)
     if config.general.compile:
         model = torch.compile(model)
-    if config.privacy.fix_model_for_privacy:
-        trained_params = []
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                trained_params.append(name)
-            param.requires_grad = True
-        model = validators.ModuleValidator.fix(model)
-        for name, param in model.named_parameters():
-            if name in trained_params:
-                param.requires_grad = True
-            else:
-                param.requires_grad = False
+    # if config.privacy.fix_model_for_privacy:
+    #     trained_params = []
+    #     for name, param in model.named_parameters():
+    #         if param.requires_grad:
+    #             trained_params.append(name)
+    #         param.requires_grad = True
+    #     model = validators.ModuleValidator.fix(model)
+    #     for name, param in model.named_parameters():
+    #         if name in trained_params:
+    #             param.requires_grad = True
+    #         else:
+    #             param.requires_grad = False
     opt = torch.optim.NAdam(model.parameters(), **config.hyperparams.opt_args)
     if config.privacy.use_privacy:
         assert (
@@ -251,7 +251,7 @@ def main(config: Config):
                 config.general.output_save_folder
                 / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
             )
-        save_dir.mkdir(exist_ok=True, parents=False)
+        save_dir.mkdir(exist_ok=True, parents=True)
         torch.save(
             {"config": config, "model_weights": model.state_dict()},
             save_dir / "final_state.pt",
