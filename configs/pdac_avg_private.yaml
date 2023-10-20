@@ -16,16 +16,17 @@ loader:
   num_workers: 16
   prefetch_factor: 4
 model:
-  backbone: resnet18
+  backbone: resnet9
   num_classes: 1
+  feature_dim: 2048
   unfreeze:
     train_mode: -1
     feature_extractor: -1
     start_only_new_layers_trainable: False
 hyperparams: 
   train_bs: 1
-  val_bs: 2
-  test_bs: 2
+  val_bs: 1
+  test_bs: 1
   grad_acc_steps: 512
 transforms:
   tf_library: monai
