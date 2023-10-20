@@ -20,7 +20,7 @@ model:
   data_view_axis: all_sides
   in_channels: 1
   num_classes: -1
-  feature_dim: 512
+  # feature_dim: 512
   unfreeze: 
     train_mode: 0
     feature_extractor: 2

@@ -5,15 +5,6 @@ from torch import Tensor, nn, stack, concatenate
 from twoandahalfdimensions.utils.config import DataViewAxis
 
 
-class Lambda(nn.Module):
-    def __init__(self, lambda_expr) -> None:
-        super().__init__()
-        self.lambda_expr = lambda_expr
-
-    def forward(self, x):
-        return self.lambda_expr(x)
-
-
 class TwoAndAHalfDModel(nn.Module, ABC):
     def __init__(
         self,
@@ -76,16 +67,15 @@ class TwoAndAHalfDPool(TwoAndAHalfDModel):
             data_view_axis,
         )
         assert mode in ["max", "avg"], "only max and average supported"
-        if mode == "max":
-            self.reduce_3d_module = Lambda(lambda x: x.max(1)[0])
-        elif mode == "avg":
-            self.reduce_3d_module = Lambda(lambda x: x.mean(1))
-        else:
-            raise ValueError(f"{mode} not supported")
+        self.mode = mode
+        self.reduce_3d_module = nn.Identity()
 
     def forward(self, x):
         x = super().forward(x)
-        x = self.reduce_3d_module(x)
+        if self.mode == "max":
+            x = x.max(1)[0]
+        elif self.mode == "avg":
+            x = x.mean(1)
         x = self.classifier(x)
         return x, None
 

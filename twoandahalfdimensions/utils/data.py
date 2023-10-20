@@ -2,6 +2,7 @@ import medmnist
 import torchio as tio
 from numpy import float32
 from typing import Any
+from torch import float32
 from torch.utils.data import DataLoader
 from monai.data.dataloader import DataLoader as MDTL
 from monai import transforms as mtf
@@ -60,9 +61,7 @@ def make_data(config: Config):
             config.transforms.test_tf,
         )
     ]
-    label_transform = (
-        None if config.model.num_classes > 1 else lambda x: x.astype(float32)
-    )
+    label_transform = None if config.model.num_classes > 1 else lambda x: x.to(float32)
     match config.data.name:
         case "ct_imagefolder":
             train_ds = CTImageFolder(
@@ -170,7 +169,9 @@ def make_loader(config: Config, datasets: tuple):
     train_dl, val_dl, test_dl = (
         dl_class(
             train_ds,
-            batch_size=config.hyperparams.train_bs,
+            batch_size=config.hyperparams.train_bs * config.hyperparams.grad_acc_steps
+            if config.privacy.use_privacy
+            else config.hyperparams.train_bs,
             shuffle=True,
             **config.loader,
         ),

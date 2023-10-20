@@ -15,9 +15,11 @@ dependencies:
   - conda-forge::scikit-learn
   - conda-forge::torchmetrics
   - conda-forge::monai
-  - conda-forge::ACSConv
+  - conda-forge::opacus>=1.4
   - pip
   - pip: 
     - medmnist
     - hydra-core
     - torchio
+    - PrivateModelArchitectures>=0.1.1
+    - git+https://github.com/a1302z/ACSConv.git

@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from typing import Optional
+from opacus.utils.batch_memory_manager import BatchMemoryManager
 
 from twoandahalfdimensions.utils.config import DataViewAxis, Config
 
@@ -19,10 +20,13 @@ def train_step(data, label, model, opt, loss_fn, settings, do_step=True):
     return loss.detach().item()
 
 
-def train(train_dl, model, opt, loss_fn, settings, grad_acc_steps=1):
+def train(train_dl, model, opt, loss_fn, settings, config):
+    opt.zero_grad()
     pbar = tqdm(enumerate(train_dl), total=len(train_dl), desc="Training", leave=False)
     losses = []
     for i, (data, label) in pbar:
+        if data.shape[0] == 0:
+            continue
         loss = train_step(
             data,
             label,
@@ -30,7 +34,9 @@ def train(train_dl, model, opt, loss_fn, settings, grad_acc_steps=1):
             opt,
             loss_fn,
             settings,
-            do_step=((i + 1) % grad_acc_steps) == 0,
+            do_step=True
+            if config.privacy.use_privacy
+            else ((i + 1) % config.hyperparams.grad_acc_steps) == 0,
         )
         losses.append(loss)
         pbar.set_description_str(f"Loss: {loss:.3f}")
@@ -46,12 +52,15 @@ def validate(
     activation_fn: torch.nn.Module,
     logging_step: int,
     data_vis_axes: Optional[DataViewAxis] = None,
+    return_raw_predictions: bool = False,
 ):
     with torch.inference_mode():
         preds, labels = [], []
         for data, label in tqdm(
             val_dl, total=len(val_dl), desc="Validating", leave=False
         ):
+            if data.shape[0] == 0:
+                continue
             data = data.to(**settings)
             pred, att_map = model(data)
             pred = activation_fn(pred)
@@ -83,7 +92,8 @@ def validate(
                 metrics["att_map"] = fig
                 # metrics["frontal_view"] = wandb.Image(data_plot)
             plt.close(fig)
-    return metrics
+    pred_label = (preds, labels) if return_raw_predictions else None
+    return metrics, pred_label
 
 
 def visualize_att_map(att_map, data, data_vis_axes: DataViewAxis):

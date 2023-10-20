@@ -1,6 +1,6 @@
 from monai.data.image_dataset import ImageDataset
 from pathlib import Path
-from numpy import array
+from torch import tensor
 from copy import deepcopy
 
 
@@ -14,4 +14,4 @@ class CTImageFolder(ImageDataset):
             ct_files = [p for p in cf.rglob("*.nii") if p.is_file()]
             paths.extend(ct_files)
             labels.extend([deepcopy(label) for _ in ct_files])
-        super().__init__(image_files=paths, labels=array(labels), *args, **kwargs)
+        super().__init__(image_files=paths, labels=tensor(labels), *args, **kwargs)

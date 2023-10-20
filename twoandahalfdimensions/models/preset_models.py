@@ -1,5 +1,7 @@
-from torch import nn, ones_like
+from torch import nn, ones_like, hub, no_grad
 from torchvision import models
+from PrivateModelArchitectures import ResNet9
+from opacus import validators
 
 from twoandahalfdimensions.models.twoandahalfdmodel import (
     TwoAndAHalfDAttention,
@@ -64,14 +66,20 @@ def make_model_adaptions(
     feature_size_in: int,
     feature_size_out: int,
 ):
+    if config.privacy.fix_model_for_privacy:
+        feature_extractor = validators.ModuleValidator.fix(feature_extractor)
+        classifier = validators.ModuleValidator.fix(classifier)
     if config.model.in_channels != 3:
         scatter_conv = nn.Conv2d(config.model.in_channels, 3, 1, bias=False)
-        for p in scatter_conv.parameters():
-            p.requires_grad_(False)
-        scatter_conv.weight.set_(ones_like(scatter_conv.weight))
+        if config.model.unfreeze.start_only_new_layers_trainable:
+            for p in scatter_conv.parameters():
+                p.requires_grad_(False)
+        with no_grad():
+            scatter_conv.weight.set_(ones_like(scatter_conv.weight))
     feature_extractor = nn.Sequential(scatter_conv, feature_extractor)
-    for param in feature_extractor.parameters():
-        param.requires_grad_(False)
+    if config.model.unfreeze.start_only_new_layers_trainable:
+        for param in feature_extractor.parameters():
+            param.requires_grad_(False)
 
     match config.model.type:
         case ModelTypes.twop5_pool:
@@ -91,7 +99,7 @@ def make_model_adaptions(
         case default:
             raise ValueError(f"{default} not supported")
     if is_our_model(config.model.type):
-        return model(
+        model = model(
             feature_extractor,
             classifier,
             feature_size_in,
@@ -102,15 +110,27 @@ def make_model_adaptions(
     else:
         model: nn.Module = converter(feature_extractor)
         model = FakeAttOutput(model.model)
+        if config.model.unfreeze.start_only_new_layers_trainable:
+            for p in model.parameters():
+                p.requires_grad_(False)
+            for p in classifier.parameters():
+                p.requires_grad_(True)
+    if not config.model.unfreeze.start_only_new_layers_trainable:
         for p in model.parameters():
-            p.requires_grad_(False)
-        for p in classifier.parameters():
             p.requires_grad_(True)
-        return model
+    return model
 
 
 def make_resnet(config: Config, disassemble_model=True):
+    classifier_name = "fc"
     match config.model.backbone:
+        case "wide_resnet50-2":
+            feature_extractor = hub.load(
+                "pytorch/vision:v0.10.0", "wide_resnet50_2", pretrained=True
+            )
+        case "resnet9":
+            feature_extractor = ResNet9(scale_norm=True, norm_layer="group")
+            classifier_name = "classifier"
         case "resnet18":
             feature_extractor = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         case "resnet34":
@@ -127,7 +147,9 @@ def make_resnet(config: Config, disassemble_model=True):
             )
         case _:
             raise ValueError(f"ResNet {config.model.backbone} not supported")
-    num_extracted_features = feature_extractor.fc.weight.shape[1]
+    num_extracted_features = feature_extractor.__getattr__(
+        classifier_name
+    ).weight.shape[1]
     classifier = nn.Linear(
         num_extracted_features
         if config.model.feature_dim is None
@@ -135,9 +157,9 @@ def make_resnet(config: Config, disassemble_model=True):
         config.model.num_classes,
     )
     if disassemble_model:
-        feature_extractor.fc = nn.Identity()
+        feature_extractor.__setattr__(name=classifier_name, value=nn.Identity())
     else:
-        feature_extractor.fc = classifier
+        feature_extractor.__setattr__(name=classifier_name, value=classifier)
     num_classified_features = classifier.weight.shape[1]
     return (
         feature_extractor,
