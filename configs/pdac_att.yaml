@@ -18,7 +18,7 @@ loader:
 model:
   num_classes: 1
   unfreeze:
-    feature_extractor: 0
+    feature_extractor: 2
 hyperparams: 
   train_bs: 2
   val_bs: 16
