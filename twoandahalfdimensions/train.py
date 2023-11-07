@@ -3,6 +3,7 @@ import hydra
 import torch
 import wandb
 import seaborn as sn
+import numpy as np
 from pathlib import Path
 from tqdm import trange
 from omegaconf import OmegaConf
@@ -19,6 +20,7 @@ from twoandahalfdimensions.utils.config import Config, load_config_store
 from twoandahalfdimensions.utils.setup import setup
 from twoandahalfdimensions.models.preset_models import make_model_from_config
 from twoandahalfdimensions.models.twoandahalfdmodel import TwoAndAHalfDModel
+from twoandahalfdimensions.Cam import cam
 from datetime import datetime
 
 sn.set_theme(
@@ -49,6 +51,8 @@ get_num_params = lambda model: sum(
 
 @hydra.main(version_base=None, config_path=str(Path.cwd() / "configs"))
 def main(config: Config):
+    print('seed', config.general.seed)
+    print('device', torch.cuda.is_available())
     metric_fns, settings, activation_fn = setup(config)
     train_ds, val_ds, test_ds = make_data(config)
     train_dl, val_dl, test_dl = make_loader(config, (train_ds, val_ds, test_ds))
@@ -75,6 +79,7 @@ def main(config: Config):
     #         else:
     #             param.requires_grad = False
     opt = torch.optim.NAdam(model.parameters(), **config.hyperparams.opt_args)
+    """
     if config.privacy.use_privacy:
         assert (
             config.privacy.fix_model_for_privacy
@@ -256,6 +261,30 @@ def main(config: Config):
             {"config": config, "model_weights": model.state_dict()},
             save_dir / "final_state.pt",
         )
+    """
+    new_model = make_model_from_config(config)
+
+    new_model = new_model.to(**settings)
+    if config.general.compile:
+        new_model = torch.compile(new_model)
+    loaded_data = torch.load("/home/triguim/2.5DAttention/out/pdac_3d_9wal15tx/final_state.pt")
+    state_dict = loaded_data["model_weights"]
+    new_model.load_state_dict(state_dict)
+
+    image = train_ds[-2][0]
+    C, h, w, d = image.shape
+    print('image shape', C, h, w, d)
+    reashaped_image = image.reshape((1,C, h, w, d))
+    reashaped_image.to(**settings)
+
+    for i, (data, label) in enumerate(train_dl):
+        data_cam = data
+        if i == 0:
+            break
+    data_cam.to(**settings)
+    cam(new_model, reashaped_image)
+    
+
 
 
 if __name__ == "__main__":
