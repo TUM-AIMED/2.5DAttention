@@ -49,6 +49,11 @@ class DataViewAxis(Enum):
     only_z = 3
 
 
+class PatchPoolingMode(Enum):
+    onestage = 0
+    twostage = 1
+
+
 @dataclass
 class UnfreezeConfig:
     train_mode: int = -1
@@ -64,6 +69,7 @@ class ModelConfig:
     num_classes: int = MISSING
     feature_dim: Optional[int] = None
     unfreeze: UnfreezeConfig = field(default_factory=UnfreezeConfig)
+    patchmode: PatchPoolingMode = PatchPoolingMode.onestage
     additional_args: dict[str, Any] = field(default_factory=dict)
 
 

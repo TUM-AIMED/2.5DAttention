@@ -1,0 +1,15 @@
+defaults:
+  - att_base@_here_
+  - _self_
+general:
+  output_save_folder: out/
+wandb:
+  name: organmnist3d_att
+data:
+  name: organmnist3d
+model: 
+  num_classes: 11
+  patchmode: twostage
+  additional_args:
+    patchify: True
+    num_patches: 2

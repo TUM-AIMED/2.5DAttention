@@ -21,3 +21,5 @@ dependencies:
     - medmnist
     - hydra-core
     - torchio
+    - einops
+    

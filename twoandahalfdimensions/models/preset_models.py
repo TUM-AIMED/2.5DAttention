@@ -97,6 +97,7 @@ def make_model_adaptions(
             feature_size_in,
             feature_size_out,
             data_view_axis=config.model.data_view_axis,
+            patchmode=config.model.patchmode,
             **config.model.additional_args,
         )
     else:
@@ -129,9 +130,11 @@ def make_resnet(config: Config, disassemble_model=True):
             raise ValueError(f"ResNet {config.model.backbone} not supported")
     num_extracted_features = feature_extractor.fc.weight.shape[1]
     classifier = nn.Linear(
-        num_extracted_features
-        if config.model.feature_dim is None
-        else config.model.feature_dim,
+        (
+            num_extracted_features
+            if config.model.feature_dim is None
+            else config.model.feature_dim
+        ),
         config.model.num_classes,
     )
     if disassemble_model:
@@ -161,9 +164,11 @@ def make_vit(config: Config, disassemble_model=True):
             feature_extractor = models.vit_h_14(models.ViT_H_14_Weights.DEFAULT)
     num_extracted_features = feature_extractor.heads[0].weight.shape[1]
     classifier = nn.Linear(
-        num_extracted_features
-        if config.model.feature_dim is None
-        else config.model.feature_dim,
+        (
+            num_extracted_features
+            if config.model.feature_dim is None
+            else config.model.feature_dim
+        ),
         config.model.num_classes,
     )
     if disassemble_model:
