@@ -119,7 +119,7 @@ def main(config: Config):
         else None
     )
 
-    train_metrics = validate(
+    train_metrics, _ = validate(
         config,
         train_dl,
         metric_fns,
@@ -129,7 +129,7 @@ def main(config: Config):
         data_vis_axes=data_view_axes,
         logging_step=0,
     )
-    val_metrics = validate(
+    val_metrics, _ = validate(
         config,
         val_dl,
         metric_fns,
@@ -165,7 +165,7 @@ def main(config: Config):
                     )
                 epoch_logging_dict["num_params"] = param_dict
         if config.general.log_wandb:
-            epoch_logging_dict["train"] = validate(
+            epoch_logging_dict["train"], _ = validate(
                 config,
                 train_dl,
                 metric_fns,
@@ -176,7 +176,7 @@ def main(config: Config):
                 logging_step=epoch + 1,
             )
             epoch_logging_dict["train"]["loss"] = mean(losses)
-            epoch_logging_dict["val"] = validate(
+            epoch_logging_dict["val"], _ = validate(
                 config,
                 val_dl,
                 metric_fns,
@@ -188,7 +188,7 @@ def main(config: Config):
             )
             epoch_logging_dict["epoch"] = epoch + 1
             wandb.log(epoch_logging_dict)
-    test_metrics = validate(
+    test_metrics, _ = validate(
         config,
         test_dl,
         metric_fns,
