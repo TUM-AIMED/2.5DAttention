@@ -34,12 +34,13 @@ Ziller, A., Erdur, A. C., Trigui, M., Güvenir, A., Mueller, T. T., Müller, P.,
 
 S. Tayebi Arasteh, A. Ziller, C. Kuhl, M. Makowski, S. Nebelung, R. Braren, D. Rueckert, D. Truhn, G. Kaissis. "*Private, fair and accurate: Training large-scale, privacy-preserving AI models in medical imaging*". ArXiv, arxiv.2302.01622, https://doi.org/10.48550/arxiv.2302.01622, 2023.
 
-    @article {DPCXR2023,
-      author = {Tayebi Arasteh, Soroosh and Ziller, Alexander and Kuhl, Christiane and Makowski, Marcus and Nebelung, Sven and Braren, Rickmer and Rueckert, Daniel and Truhn, Daniel and Kaissis, Georgios},
-      title = {Private, fair and accurate: Training large-scale, privacy-preserving AI models in medical imaging},
-      year = {2023},
-      doi = {10.48550/ARXIV.2302.01622},
-      publisher = {arXiv},
-      URL = {https://arxiv.org/abs/2302.01622},
-      journal = {arXiv}
+    @article{tayebi2024preserving,
+      title={Preserving fairness and diagnostic accuracy in private large-scale AI models for medical imaging},
+      author={Tayebi Arasteh, Soroosh and Ziller, Alexander and Kuhl, Christiane and Makowski, Marcus and Nebelung, Sven and Braren, Rickmer and Rueckert, Daniel and Truhn, Daniel and Kaissis, Georgios},
+      journal={Communications Medicine},
+      volume={4},
+      number={1},
+      pages={46},
+      year={2024},
+      publisher={Nature Publishing Group UK London}
     }
