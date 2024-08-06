@@ -22,13 +22,10 @@ def make_configs(train_config_path: Union[str, Path]) -> tuple[OmegaConf, Config
 
 
 # %%
-cfg1 = make_configs("configs/att_base.yaml")
-cfg2 = make_configs("configs/pdac_att.yaml")
-config = OmegaConf.merge(cfg1, cfg2)
-
-# %%
-path_to_model_state_dict = Path("out/pdac_att_1lmxike0/final_state.pt")
-state_dict = load(path_to_model_state_dict)
+path_to_model_state_dict = Path("out/pdac_acs_private_e78514dh/final_state.pt")
+state_dict = load(path_to_model_state_dict, map_location='cpu')
+config = state_dict["config"]
+config = OmegaConf.create(config)
 
 # %%
 metric_fns, settings, activation_fn = setup(config)

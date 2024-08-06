@@ -129,6 +129,7 @@ def make_resnet(config: Config, disassemble_model=True):
                 "pytorch/vision:v0.10.0", "wide_resnet50_2", pretrained=True
             )
         case "resnet9":
+            # feature_extractor = ResNet9(3, 165, scale_norm=True, norm_layer="group", use_pretrained_weights=True)
             feature_extractor = ResNet9(scale_norm=True, norm_layer="group")
             classifier_name = "classifier"
         case "resnet18":

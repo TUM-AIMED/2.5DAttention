@@ -8,6 +8,7 @@ general:
 wandb:
   project: twoandahalfdimensions
   name: pdac_acs_private
+  group: baseline
 data:
   name: ct_imagefolder
   loader: monai

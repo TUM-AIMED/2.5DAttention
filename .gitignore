@@ -164,3 +164,9 @@ outputs/
 wandb/
 sweeps/
 playground/
+slurm_out
+*.pt
+*.sbatch
+wandb/
+out
+wandb
